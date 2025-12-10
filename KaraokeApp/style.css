@@ -287,6 +287,137 @@ button {
   align-items: center;
 }
 
+.admin-manual {
+  margin-top: 8px;
+  background: var(--color-surface);
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-manual-header {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.admin-manual-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.admin-manual-row-bottom {
+  align-items: stretch;
+}
+
+.admin-manual-col {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-manual-col-header {
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.admin-manual-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  min-width: 180px;
+}
+
+.admin-manual select,
+.admin-manual input {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.admin-manual-table-wrapper {
+  flex: 1;
+  min-width: 260px;
+  max-height: 9.5rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  overflow: auto;
+}
+
+.admin-manual-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.admin-manual-table thead {
+  position: sticky;
+  top: 0;
+  background: #202030;
+  z-index: 1;
+}
+
+.admin-manual-table th,
+.admin-manual-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: left;
+}
+
+.admin-manual-table tbody tr {
+  cursor: pointer;
+}
+
+.admin-manual-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-manual-table tbody tr.selected {
+  background: rgba(0, 204, 255, 0.2);
+}
+
+.admin-manual-table .col-title {
+  width: 50%;
+}
+
+.admin-manual-table .col-artist {
+  width: 30%;
+}
+
+.admin-manual-table .col-category {
+  width: 20%;
+  text-transform: capitalize;
+  color: var(--color-muted);
+}
+
+.admin-manual-search input {
+  min-width: 220px;
+}
+
+.admin-manual-hint {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.btn-small {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  align-self: flex-start;
+}
+
 .admin-status {
   font-size: 0.85rem;
   color: var(--color-muted);

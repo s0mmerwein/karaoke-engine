@@ -84,6 +84,109 @@
           </div>
         </div>
       </section>
+
+      <section class="admin-manual">
+        <div class="admin-manual-header">
+          Manuelle Song-Auswahl aus Datenbank
+        </div>
+        <div class="admin-manual-row admin-manual-row-bottom">
+          <div class="admin-manual-col">
+            <div class="admin-manual-col-header text-power">Power</div>
+            <label class="admin-manual-field admin-manual-search">
+              Suche
+              <input
+                type="text"
+                id="manual-search-power"
+                placeholder="Titel oder Künstler suchen …"
+              />
+            </label>
+            <div class="admin-manual-table-wrapper">
+              <table class="admin-manual-table">
+                <thead>
+                  <tr>
+                    <th>Titel</th>
+                    <th>Interpret</th>
+                  </tr>
+                </thead>
+                <tbody id="manual-song-tbody-power"></tbody>
+              </table>
+            </div>
+            <button
+              id="btn-manual-set-power"
+              class="btn btn-secondary btn-small"
+            >
+              In Slot 1 übernehmen
+            </button>
+          </div>
+
+          <div class="admin-manual-col">
+            <div class="admin-manual-col-header text-emotional">Emotional</div>
+            <label class="admin-manual-field admin-manual-search">
+              Suche
+              <input
+                type="text"
+                id="manual-search-emotional"
+                placeholder="Titel oder Künstler suchen …"
+              />
+            </label>
+            <div class="admin-manual-table-wrapper">
+              <table class="admin-manual-table">
+                <thead>
+                  <tr>
+                    <th>Titel</th>
+                    <th>Interpret</th>
+                  </tr>
+                </thead>
+                <tbody id="manual-song-tbody-emotional"></tbody>
+              </table>
+            </div>
+            <button
+              id="btn-manual-set-emotional"
+              class="btn btn-secondary btn-small"
+            >
+              In Slot 2 übernehmen
+            </button>
+          </div>
+
+          <div class="admin-manual-col">
+            <div class="admin-manual-col-header text-evergreen">
+              Evergreen
+            </div>
+            <label class="admin-manual-field admin-manual-search">
+              Suche
+              <input
+                type="text"
+                id="manual-search-evergreen"
+                placeholder="Titel oder Künstler suchen …"
+              />
+            </label>
+            <div class="admin-manual-table-wrapper">
+              <table class="admin-manual-table">
+                <thead>
+                  <tr>
+                    <th>Titel</th>
+                    <th>Interpret</th>
+                  </tr>
+                </thead>
+                <tbody id="manual-song-tbody-evergreen"></tbody>
+              </table>
+            </div>
+            <button
+              id="btn-manual-set-evergreen"
+              class="btn btn-secondary btn-small"
+            >
+              In Slot 3 übernehmen
+            </button>
+          </div>
+        </div>
+        <div class="admin-manual-hint">
+          Wähle einen Song aus der Datenbank und setze ihn als Vorschlag für den
+          passenden Slot. Das Publikum kann dann wie gewohnt mit
+          <span class="text-power">1</span>,
+          <span class="text-emotional">2</span> oder
+          <span class="text-evergreen">3</span> auswählen.
+        </div>
+      </section>
     </div>
 
     <!-- Data and shared logic -->
@@ -106,6 +209,26 @@
       const btnShow = document.getElementById("btn-show");
       const btnStart = document.getElementById("btn-start");
       const statusText = document.getElementById("status-text");
+      const manualSongTableBodies = {
+        power: document.getElementById("manual-song-tbody-power"),
+        emotional: document.getElementById("manual-song-tbody-emotional"),
+        evergreen: document.getElementById("manual-song-tbody-evergreen"),
+      };
+      const manualSearchInputs = {
+        power: document.getElementById("manual-search-power"),
+        emotional: document.getElementById("manual-search-emotional"),
+        evergreen: document.getElementById("manual-search-evergreen"),
+      };
+      const btnManualSetBySlot = {
+        power: document.getElementById("btn-manual-set-power"),
+        emotional: document.getElementById("btn-manual-set-emotional"),
+        evergreen: document.getElementById("btn-manual-set-evergreen"),
+      };
+      const manualSelectedSongId = {
+        power: null,
+        emotional: null,
+        evergreen: null,
+      };
 
       const slotEls = {
         power: document.getElementById("slot-power"),
@@ -238,6 +361,101 @@
         });
       }
 
+      function setManualSelectedRow(slot, id) {
+        manualSelectedSongId[slot] = id;
+        const body = manualSongTableBodies[slot];
+        if (!body) return;
+
+        const rows = Array.from(body.querySelectorAll("tr"));
+        rows.forEach((row) => {
+          const rowId = parseInt(row.dataset.songId || "0", 10);
+          if (rowId === id) {
+            row.classList.add("selected");
+          } else {
+            row.classList.remove("selected");
+          }
+        });
+
+        const btn = btnManualSetBySlot[slot];
+        if (btn) {
+          btn.disabled = !id;
+        }
+      }
+
+      function renderManualSongOptions(slotFilter) {
+        if (!window.SONGS) return;
+        const allSongs = Array.isArray(window.SONGS) ? window.SONGS : [];
+
+        const slotsToRender = slotFilter
+          ? [slotFilter]
+          : ["power", "emotional", "evergreen"];
+
+        slotsToRender.forEach((slot) => {
+          const body = manualSongTableBodies[slot];
+          if (!body) return;
+
+          body.innerHTML = "";
+          manualSelectedSongId[slot] = null;
+
+          const input = manualSearchInputs[slot];
+          const search = input ? input.value.toLowerCase() : "";
+
+          const filtered = allSongs.filter((song) => {
+            if (song.category !== slot) return false;
+            if (!search) return true;
+            const haystack = (song.title + " " + song.artist).toLowerCase();
+            return haystack.includes(search);
+          });
+
+          filtered.forEach((song) => {
+            const row = document.createElement("tr");
+            row.dataset.songId = String(song.id);
+
+            const titleCell = document.createElement("td");
+            titleCell.className = "col-title";
+            titleCell.textContent = song.title;
+
+            const artistCell = document.createElement("td");
+            artistCell.className = "col-artist";
+            artistCell.textContent = song.artist;
+
+            row.appendChild(titleCell);
+            row.appendChild(artistCell);
+
+            row.addEventListener("click", () => {
+              setManualSelectedRow(slot, song.id);
+            });
+
+            body.appendChild(row);
+          });
+
+          const btn = btnManualSetBySlot[slot];
+          if (btn) {
+            // Disable if there are no songs or no row has been selected yet.
+            btn.disabled = filtered.length === 0 || !manualSelectedSongId[slot];
+          }
+        });
+      }
+
+      function handleManualSet(slot) {
+        if (!window.SONGS || !manualSelectedSongId[slot]) return;
+        const id = manualSelectedSongId[slot];
+
+        const allSongs = Array.isArray(window.SONGS) ? window.SONGS : [];
+        const song = allSongs.find((s) => s.id === id);
+        if (!song) return;
+
+        const effectiveSlot = slot || song.category || "power";
+        currentSuggestions[effectiveSlot] = song;
+
+        renderAllSlots();
+
+        btnShow.disabled =
+          !currentSuggestions.power &&
+          !currentSuggestions.emotional &&
+          !currentSuggestions.evergreen;
+      }
+
       function slotFromKey(key) {
         if (key === "1") return "power";
         if (key === "2") return "emotional";
@@ -308,10 +526,34 @@
         btnStart.addEventListener("click", handleStartNextSong);
         window.addEventListener("keydown", handleAdminKeydown);
 
+        Object.entries(manualSearchInputs).forEach(([slot, input]) => {
+          if (input) {
+            input.addEventListener("input", () =>
+              renderManualSongOptions(slot)
+            );
+          }
+        });
+        if (btnManualSetBySlot.power) {
+          btnManualSetBySlot.power.addEventListener("click", () =>
+            handleManualSet("power")
+          );
+        }
+        if (btnManualSetBySlot.emotional) {
+          btnManualSetBySlot.emotional.addEventListener("click", () =>
+            handleManualSet("emotional")
+          );
+        }
+        if (btnManualSetBySlot.evergreen) {
+          btnManualSetBySlot.evergreen.addEventListener("click", () =>
+            handleManualSet("evergreen")
+          );
+        }
+
         if (window.onKaraokeMessage) {
           window.onKaraokeMessage(handleBroadcast);
         }
 
+        renderManualSongOptions();
         updateStatus();
       }
 
