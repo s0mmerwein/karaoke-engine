@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Karaoke Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="admin-root">
+      <header class="admin-header">
+        <div>
+          <h1>Karaoke Flow – Selector</h1>
+          <div class="admin-subtitle">
+            Öffne diese Seite im Laptop-Browser. Öffne danach
+            <span class="text-emotional">projector.html</span> in einem zweiten
+            Fenster für den Beamer.
+          </div>
+        </div>
+        <div class="kbd-hint">
+          Buzzer:
+          <span class="kbd">1</span> Power,
+          <span class="kbd">2</span> Emotional,
+          <span class="kbd">3</span> Evergreen
+        </div>
+      </header>
+
+      <main class="admin-columns">
+        <section class="admin-column" id="slot-power">
+          <div class="admin-column-header">
+            <div class="admin-column-title">Slot 1</div>
+            <div class="admin-column-badge power">Power</div>
+          </div>
+          <div class="admin-ticket-shell">
+            <div class="admin-ticket-empty">
+              Noch keine Empfehlung. Nutze
+              <span class="text-power">Generate Suggestions</span>.
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-column" id="slot-emotional">
+          <div class="admin-column-header">
+            <div class="admin-column-title">Slot 2</div>
+            <div class="admin-column-badge emotional">Emotional</div>
+          </div>
+          <div class="admin-ticket-shell">
+            <div class="admin-ticket-empty">
+              Noch keine Empfehlung. Nutze
+              <span class="text-power">Generate Suggestions</span>.
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-column" id="slot-evergreen">
+          <div class="admin-column-header">
+            <div class="admin-column-title">Slot 3</div>
+            <div class="admin-column-badge evergreen">Evergreen</div>
+          </div>
+          <div class="admin-ticket-shell">
+            <div class="admin-ticket-empty">
+              Noch keine Empfehlung. Nutze
+              <span class="text-power">Generate Suggestions</span>.
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <section class="admin-controls">
+        <div class="admin-controls-left">
+          <button id="btn-generate" class="btn btn-primary">
+            Generate Suggestions
+          </button>
+          <button id="btn-show" class="btn btn-secondary" disabled>
+            Show to Audience
+          </button>
+        </div>
+        <div class="admin-controls-right">
+          <button id="btn-start" class="btn btn-danger" disabled>
+            Start Next Song
+          </button>
+          <div class="admin-status" id="status-text">
+            Noch keine Auswahl getroffen.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Data and shared logic -->
+    <script src="data.js"></script>
+    <script src="logic.js"></script>
+
+    <script>
+      // Local state
+      const playedSongIds = new Set();
+      const currentSuggestions = {
+        power: null,
+        emotional: null,
+        evergreen: null,
+      };
+      let nextSong = null;
+      let nextSlot = null;
+
+      // DOM references
+      const btnGenerate = document.getElementById("btn-generate");
+      const btnShow = document.getElementById("btn-show");
+      const btnStart = document.getElementById("btn-start");
+      const statusText = document.getElementById("status-text");
+
+      const slotEls = {
+        power: document.getElementById("slot-power"),
+        emotional: document.getElementById("slot-emotional"),
+        evergreen: document.getElementById("slot-evergreen"),
+      };
+
+      function randomChoice(arr) {
+        if (!arr.length) return null;
+        const idx = Math.floor(Math.random() * arr.length);
+        return arr[idx];
+      }
+
+      function pickSongForCategory(category) {
+        if (!Array.isArray(window.SONGS)) return null;
+        const allInCat = window.SONGS.filter(
+          (s) => s.category === category
+        );
+        if (!allInCat.length) return null;
+
+        const unplayed = allInCat.filter((s) => !playedSongIds.has(s.id));
+        const pool = unplayed.length ? unplayed : allInCat;
+        return randomChoice(pool);
+      }
+
+      function renderSlot(slot, song) {
+        const slotEl = slotEls[slot];
+        if (!slotEl) return;
+        const shell = slotEl.querySelector(".admin-ticket-shell");
+        if (!shell) return;
+
+        shell.innerHTML = "";
+
+        if (!song) {
+          const empty = document.createElement("div");
+          empty.className = "admin-ticket-empty";
+          empty.textContent =
+            "Noch keine Empfehlung. Nutze Generate Suggestions.";
+          shell.appendChild(empty);
+          return;
+        }
+
+        const ticket = document.createElement("div");
+        ticket.className =
+          "ticket ticket-" +
+          slot +
+          " visible" +
+          (nextSong && nextSong.id === song.id ? " locked" : "");
+        ticket.style.pointerEvents = "none";
+
+        const keyLabel = slot === "power" ? "1" : slot === "emotional" ? "2" : "3";
+
+        ticket.innerHTML =
+          '<div class="ticket-inner">' +
+          '<div class="ticket-key">' +
+          keyLabel +
+          "</div>" +
+          '<div class="ticket-label">' +
+          (slot === "power"
+            ? "Power"
+            : slot === "emotional"
+            ? "Emotional"
+            : "Evergreen") +
+          "</div>" +
+          '<div class="ticket-title">' +
+          song.title +
+          "</div>" +
+          '<div class="ticket-artist">' +
+          song.artist +
+          "</div>" +
+          '<div class="ticket-shortcode">YouTube ID: ' +
+          song.youtubeId +
+          "</div>" +
+          "</div>";
+
+        shell.appendChild(ticket);
+      }
+
+      function renderAllSlots() {
+        ["power", "emotional", "evergreen"].forEach((slot) => {
+          renderSlot(slot, currentSuggestions[slot]);
+        });
+      }
+
+      function updateStatus() {
+        if (!nextSong) {
+          statusText.innerHTML =
+            'Noch keine Auswahl getroffen. Nutze <span class="text-power">1</span>, <span class="text-emotional">2</span> oder <span class="text-evergreen">3</span>.';
+          return;
+        }
+        statusText.innerHTML =
+          'Next: <span class="admin-status-strong">' +
+          nextSong.title +
+          "</span> – " +
+          nextSong.artist +
+          " (" +
+          (nextSlot === "power"
+            ? "Power"
+            : nextSlot === "emotional"
+            ? "Emotional"
+            : "Evergreen") +
+          ")";
+      }
+
+      function handleGenerate() {
+        currentSuggestions.power = pickSongForCategory("power");
+        currentSuggestions.emotional = pickSongForCategory("emotional");
+        currentSuggestions.evergreen = pickSongForCategory("evergreen");
+
+        renderAllSlots();
+
+        btnShow.disabled =
+          !currentSuggestions.power &&
+          !currentSuggestions.emotional &&
+          !currentSuggestions.evergreen;
+
+        // Reset locked state
+        nextSong = null;
+        nextSlot = null;
+        btnStart.disabled = true;
+        updateStatus();
+      }
+
+      function handleShowToAudience() {
+        if (!window.sendKaraokeMessage) return;
+        window.sendKaraokeMessage("SHOW_OPTIONS", {
+          power: currentSuggestions.power,
+          emotional: currentSuggestions.emotional,
+          evergreen: currentSuggestions.evergreen,
+        });
+      }
+
+      function slotFromKey(key) {
+        if (key === "1") return "power";
+        if (key === "2") return "emotional";
+        if (key === "3") return "evergreen";
+        return null;
+      }
+
+      function handleChoiceKey(key) {
+        const slot = slotFromKey(key);
+        if (!slot) return;
+        if (nextSong) {
+          // Already locked for this round, ignore further keys.
+          return;
+        }
+
+        const song = currentSuggestions[slot];
+        if (!song) return;
+
+        nextSong = song;
+        nextSlot = slot;
+        btnStart.disabled = false;
+        updateStatus();
+        renderAllSlots();
+
+        if (window.sendKaraokeMessage) {
+          window.sendKaraokeMessage("LOCK_CHOICE", {
+            slot,
+            song,
+          });
+        }
+      }
+
+      function handleStartNextSong() {
+        if (!nextSong || !window.sendKaraokeMessage) return;
+
+        window.sendKaraokeMessage("PLAY_SONG", {
+          youtubeId: nextSong.youtubeId,
+          song: nextSong,
+        });
+
+        playedSongIds.add(nextSong.id);
+
+        // Mark as consumed, but keep status until next suggestion round
+        btnStart.disabled = true;
+        updateStatus();
+      }
+
+      function handleAdminKeydown(ev) {
+        const key = ev.key;
+        if (key === "1" || key === "2" || key === "3") {
+          handleChoiceKey(key);
+        }
+      }
+
+      function handleBroadcast(msg) {
+        if (!msg || !msg.action) return;
+        if (msg.action === "AUDIENCE_KEY") {
+          const key = msg.payload && msg.payload.key;
+          if (key) {
+            handleChoiceKey(key);
+          }
+        }
+      }
+
+      function init() {
+        btnGenerate.addEventListener("click", handleGenerate);
+        btnShow.addEventListener("click", handleShowToAudience);
+        btnStart.addEventListener("click", handleStartNextSong);
+        window.addEventListener("keydown", handleAdminKeydown);
+
+        if (window.onKaraokeMessage) {
+          window.onKaraokeMessage(handleBroadcast);
+        }
+
+        updateStatus();
+      }
+
+      window.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>
+
+

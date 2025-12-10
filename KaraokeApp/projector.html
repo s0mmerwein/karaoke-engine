@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Karaoke Projector</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="player"></div>
+
+    <div id="overlay">
+      <div class="overlay-ticket-row">
+        <div
+          id="ticket-power"
+          class="ticket ticket-power"
+          data-slot="power"
+        >
+          <div class="ticket-inner">
+            <div class="ticket-key">1</div>
+            <div class="ticket-label">Power</div>
+            <div class="ticket-title">–</div>
+            <div class="ticket-artist">–</div>
+          </div>
+        </div>
+        <div
+          id="ticket-emotional"
+          class="ticket ticket-emotional"
+          data-slot="emotional"
+        >
+          <div class="ticket-inner">
+            <div class="ticket-key">2</div>
+            <div class="ticket-label">Emotional</div>
+            <div class="ticket-title">–</div>
+            <div class="ticket-artist">–</div>
+          </div>
+        </div>
+        <div
+          id="ticket-evergreen"
+          class="ticket ticket-evergreen"
+          data-slot="evergreen"
+        >
+          <div class="ticket-inner">
+            <div class="ticket-key">3</div>
+            <div class="ticket-label">Evergreen</div>
+            <div class="ticket-title">–</div>
+            <div class="ticket-artist">–</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shared BroadcastChannel helpers -->
+    <script src="logic.js"></script>
+
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script>
+      let player = null;
+      let playerReady = false;
+      let pendingVideoId = null;
+
+      function createPlayer() {
+        player = new YT.Player("player", {
+          width: "100%",
+          height: "100%",
+          videoId: "",
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            modestbranding: 1,
+            rel: 0,
+            showinfo: 0,
+            fs: 0,
+          },
+          events: {
+            onReady: onPlayerReady,
+          },
+        });
+      }
+
+      function onPlayerReady() {
+        playerReady = true;
+        if (pendingVideoId) {
+          player.loadVideoById(pendingVideoId);
+          player.playVideo();
+          pendingVideoId = null;
+        }
+      }
+
+      // Called automatically by the YouTube IFrame API once it's ready.
+      function onYouTubeIframeAPIReady() {
+        createPlayer();
+      }
+
+      // Ticket / overlay helpers
+      const ticketEls = {};
+
+      function initTickets() {
+        ["power", "emotional", "evergreen"].forEach((slot) => {
+          const el = document.getElementById("ticket-" + slot);
+          if (el) {
+            ticketEls[slot] = el;
+          }
+        });
+        hideAllTickets();
+      }
+
+      function hideAllTickets() {
+        Object.values(ticketEls).forEach((el) => {
+          el.classList.remove("visible", "locked");
+          el.classList.add("hidden");
+          const titleEl = el.querySelector(".ticket-title");
+          const artistEl = el.querySelector(".ticket-artist");
+          if (titleEl) titleEl.textContent = "–";
+          if (artistEl) artistEl.textContent = "–";
+        });
+      }
+
+      function showOptions(payload) {
+        const { power, emotional, evergreen } = payload || {};
+        const bySlot = { power, emotional, evergreen };
+
+        Object.entries(bySlot).forEach(([slot, song]) => {
+          const el = ticketEls[slot];
+          if (!el) return;
+
+          el.classList.remove("locked", "hidden");
+          if (song) {
+            const titleEl = el.querySelector(".ticket-title");
+            const artistEl = el.querySelector(".ticket-artist");
+            if (titleEl) titleEl.textContent = song.title || "";
+            if (artistEl) artistEl.textContent = song.artist || "";
+            el.classList.add("visible");
+          } else {
+            el.classList.remove("visible");
+            el.classList.add("hidden");
+          }
+        });
+      }
+
+      function lockChoice(payload) {
+        const { slot } = payload || {};
+        if (!slot || !ticketEls[slot]) return;
+
+        Object.entries(ticketEls).forEach(([key, el]) => {
+          if (key === slot) {
+            el.classList.add("locked");
+            el.classList.remove("hidden");
+            el.classList.add("visible");
+          } else {
+            el.classList.remove("locked");
+            el.classList.remove("visible");
+            el.classList.add("hidden");
+          }
+        });
+
+        // Optional: could play a sound effect here.
+      }
+
+      function playSong(payload) {
+        const youtubeId = payload && payload.youtubeId;
+        if (!youtubeId) return;
+
+        // Hide tickets while song plays
+        Object.values(ticketEls).forEach((el) => {
+          el.classList.remove("visible", "locked");
+          el.classList.add("hidden");
+        });
+
+        if (playerReady && player && typeof player.loadVideoById === "function") {
+          player.loadVideoById(youtubeId);
+          player.playVideo();
+        } else {
+          pendingVideoId = youtubeId;
+        }
+      }
+
+      function handleMessage(msg) {
+        if (!msg || !msg.action) return;
+        const action = msg.action;
+        const payload = msg.payload || {};
+
+        switch (action) {
+          case "SHOW_OPTIONS":
+            showOptions(payload);
+            break;
+          case "LOCK_CHOICE":
+            lockChoice(payload);
+            break;
+          case "PLAY_SONG":
+            playSong(payload);
+            break;
+          default:
+            break;
+        }
+      }
+
+      function setupKeyboard() {
+        window.addEventListener("keydown", (ev) => {
+          const key = ev.key;
+          if (key === "1" || key === "2" || key === "3") {
+            if (window.sendKaraokeMessage) {
+              window.sendKaraokeMessage("AUDIENCE_KEY", { key });
+            }
+          }
+        });
+      }
+
+      window.addEventListener("DOMContentLoaded", () => {
+        initTickets();
+        setupKeyboard();
+        if (window.onKaraokeMessage) {
+          window.onKaraokeMessage(handleMessage);
+        }
+      });
+    </script>
+  </body>
+</html>
+
+
