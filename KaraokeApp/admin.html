@@ -24,21 +24,35 @@
             >
               Clear stored state
             </button>
-            <button
-              id="btn-load-songs"
-              class="btn btn-header btn-small"
-              type="button"
-            >
-              Load playlist
-            </button>
-          </div>
-          <div class="admin-header-buttons">
-            <input
-              type="text"
-              id="sheet-url-input"
-              class="admin-global-search-input"
-              placeholder="Spreadsheet / opensheet URL… (optional)"
-            />
+            <div class="sheet-dropdown" id="sheet-dropdown">
+              <button
+                id="btn-load-songs"
+                class="btn btn-header btn-small"
+                type="button"
+              >
+                Load playlist
+              </button>
+              <div class="sheet-dropdown-panel">
+                <div class="sheet-dropdown-label">
+                  Spreadsheet / opensheet URL
+                </div>
+                <input
+                  type="text"
+                  id="sheet-url-input"
+                  class="admin-global-search-input"
+                  placeholder="Spreadsheet / opensheet URL… (optional)"
+                />
+                <div class="sheet-dropdown-hint">
+                  Leave empty to use the configured default sheet.
+                </div>
+                <div
+                  id="sheet-load-state-description"
+                  class="sheet-dropdown-state"
+                >
+                  No playlist loaded yet.
+                </div>
+              </div>
+            </div>
           </div>
           <div id="sheet-status-message" class="admin-status-sub"></div>
         </div>
@@ -226,7 +240,8 @@
       const SHEET_TAB = "Songs"; // or your tab name
 
       // Load songs from Google Sheet
-      async function loadSongsFromSheet() {
+      async function loadSongsFromSheet(options = {}) {
+        const { updateLoadState = true } = options;
         const statusText = document.getElementById("status-text");
         const sheetStatus = document.getElementById("sheet-status-message");
         if (statusText) {
@@ -234,6 +249,11 @@
         }
         if (sheetStatus) {
           sheetStatus.innerText = "Lade Playlist...";
+        }
+
+        // Whenever a manual load is triggered, visually reset to neutral while loading.
+        if (updateLoadState) {
+          setLoadButtonState(LOAD_STATE.NEUTRAL);
         }
 
         const sheetUrlInput = document.getElementById("sheet-url-input");
@@ -294,7 +314,12 @@
           statusText.innerText = `${songs.length} Songs bereit!`;
         }
         if (sheetStatus) {
-          sheetStatus.innerText = `Erfolgreich geladen (${songs.length} Songs)`;
+          sheetStatus.innerText = "";
+        }
+
+        // Mark visual state as successful when remote or custom sheet load works.
+        if (updateLoadState) {
+          setLoadButtonState(LOAD_STATE.SUCCESS);
         }
 
         // Enable generate button once songs are ready
@@ -303,9 +328,10 @@
         }
       }
 
-      async function initApp() {
+      async function initApp(options = {}) {
+        const { updateLoadState = true } = options;
         try {
-          await loadSongsFromSheet(); // Try to load Google Sheet
+          await loadSongsFromSheet({ updateLoadState }); // Try to load Google Sheet
         } catch (e) {
           console.warn("Nutze lokales Backup aus data.js", e);
           const sheetStatus = document.getElementById("sheet-status-message");
@@ -318,12 +344,19 @@
               sheetStatus.innerText =
                 "Fehler beim Laden. Prüfe die URL / Veröffentlichung.";
             }
+            // No songs available at all – mark as failed.
+            if (updateLoadState) {
+              setLoadButtonState(LOAD_STATE.ERROR);
+            }
           } else if (btnGenerate) {
             // If fallback data is available, enable generate button
             btnGenerate.disabled = false;
             if (sheetStatus) {
-              sheetStatus.innerText =
-                "Google Sheet nicht erreichbar – nutze lokales Backup.";
+              sheetStatus.innerText = "";
+            }
+            // Fallback still provides a working playlist – treat as success.
+            if (updateLoadState) {
+              setLoadButtonState(LOAD_STATE.SUCCESS);
             }
           }
         } finally {
@@ -418,6 +451,11 @@
       const btnClearState = document.getElementById("btn-clear-state");
       const btnOpenProjector = document.getElementById("btn-open-projector");
       const btnLoadSongs = document.getElementById("btn-load-songs");
+      const sheetDropdown = document.getElementById("sheet-dropdown");
+      const sheetUrlInputGlobal = document.getElementById("sheet-url-input");
+      const sheetLoadStateDescription = document.getElementById(
+        "sheet-load-state-description"
+      );
       const statusText = document.getElementById("status-text");
       const manualSongTableBodies = {
         power: document.getElementById("manual-song-tbody-power"),
@@ -452,6 +490,66 @@
         emotional: document.getElementById("slot-emotional"),
         evergreen: document.getElementById("slot-evergreen"),
       };
+
+      // Load playlist button visual state
+      const LOAD_STATE = {
+        NEUTRAL: "neutral",
+        SUCCESS: "success",
+        ERROR: "error",
+      };
+      let currentLoadState = LOAD_STATE.NEUTRAL;
+
+      function applyLoadButtonState() {
+        if (!btnLoadSongs) return;
+        btnLoadSongs.classList.remove(
+          "btn-load-neutral",
+          "btn-load-success",
+          "btn-load-error"
+        );
+        if (sheetLoadStateDescription) {
+          sheetLoadStateDescription.textContent = "No playlist loaded yet.";
+        }
+        switch (currentLoadState) {
+          case LOAD_STATE.SUCCESS:
+            btnLoadSongs.classList.add("btn-load-success");
+            if (sheetLoadStateDescription) {
+              sheetLoadStateDescription.textContent =
+                "Playlist successfully loaded.";
+            }
+            break;
+          case LOAD_STATE.ERROR:
+            btnLoadSongs.classList.add("btn-load-error");
+            if (sheetLoadStateDescription) {
+              sheetLoadStateDescription.textContent =
+                "Error loading playlist. Check URL or sheet publication.";
+            }
+            break;
+          case LOAD_STATE.NEUTRAL:
+          default:
+            btnLoadSongs.classList.add("btn-load-neutral");
+            break;
+        }
+      }
+
+      function setLoadButtonState(state) {
+        currentLoadState = state;
+        applyLoadButtonState();
+      }
+
+      function toggleSheetDropdown() {
+        if (!sheetDropdown) return false;
+        const isOpen = sheetDropdown.classList.contains("open");
+        if (!isOpen) {
+          sheetDropdown.classList.add("open");
+          if (sheetUrlInputGlobal) {
+            sheetUrlInputGlobal.focus();
+            sheetUrlInputGlobal.select();
+          }
+        } else {
+          sheetDropdown.classList.remove("open");
+        }
+        return !isOpen;
+      }
 
       // Keep a handle to the projector tab/window if we opened it,
       // so subsequent clicks can focus it instead of spawning many tabs.
@@ -1102,6 +1200,9 @@
           btnGenerate.disabled = true;
           btnGenerate.addEventListener("click", handleGenerate);
         }
+        // Default visual state of "Load playlist" button is neutral grey.
+        setLoadButtonState(LOAD_STATE.NEUTRAL);
+
         btnShow.addEventListener("click", handleShowToAudience);
         btnStart.addEventListener("click", handleStartNextSong);
         if (btnClearSelection) {
@@ -1114,11 +1215,23 @@
           btnOpenProjector.addEventListener("click", openOrFocusProjector);
         }
         if (btnLoadSongs) {
-          btnLoadSongs.addEventListener("click", () => {
+          btnLoadSongs.addEventListener("click", async () => {
+            // First click opens the dropdown and focuses the URL input.
+            const justOpened = toggleSheetDropdown();
+            if (justOpened) {
+              return;
+            }
+
+            // Second click (while open) actually performs the load.
             if (btnGenerate) {
               btnGenerate.disabled = true;
             }
-            initApp();
+            try {
+              await initApp();
+            } catch (e) {
+              // initApp already updates status text and button state; just log here.
+              console.error(e);
+            }
           });
         }
         window.addEventListener("keydown", handleAdminKeydown);
@@ -1161,7 +1274,9 @@
         }
 
         // Load songs first (Google Sheet with local fallback), then restore state/UI
-        initApp();
+        // Do not change the visual state of the "Load playlist" button for this
+        // automatic initial load – keep it neutral until the user interacts.
+        initApp({ updateLoadState: false });
       }
 
       window.addEventListener("DOMContentLoaded", init);
