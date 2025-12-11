@@ -206,6 +206,7 @@
       };
       let nextSong = null;
       let nextSlot = null;
+      let isAudienceShowingOptions = false;
 
       // DOM references
       const btnGenerate = document.getElementById("btn-generate");
@@ -239,6 +240,18 @@
         emotional: document.getElementById("slot-emotional"),
         evergreen: document.getElementById("slot-evergreen"),
       };
+
+      function setAudienceShowingOptions(isShowing) {
+        isAudienceShowingOptions = !!isShowing;
+        const body = document.body;
+        if (!body) return;
+        if (isAudienceShowingOptions) {
+          body.classList.add("audience-showing-options");
+        } else {
+          body.classList.remove("audience-showing-options");
+        }
+        updateStatus();
+      }
 
       function randomChoice(arr) {
         if (!arr.length) return null;
@@ -319,11 +332,16 @@
 
       function updateStatus() {
         if (!nextSong) {
-          statusText.innerHTML =
+          let html =
             'No selection made yet. Use <span class="text-power">1</span>, <span class="text-emotional">2</span> or <span class="text-evergreen">3</span>.';
+          if (isAudienceShowingOptions) {
+            html +=
+              ' – <span class="text-emotional">shown to audience</span>';
+          }
+          statusText.innerHTML = html;
           return;
         }
-        statusText.innerHTML =
+        let html =
           'Next: <span class="admin-status-strong">' +
           nextSong.title +
           "</span> – " +
@@ -335,6 +353,10 @@
             ? "Emotional"
             : "Evergreen") +
           ")";
+        if (isAudienceShowingOptions) {
+          html += ' – <span class="text-emotional">shown to audience</span>';
+        }
+        statusText.innerHTML = html;
       }
 
       function handleGenerate() {
@@ -354,16 +376,31 @@
         nextSlot = null;
         btnStart.disabled = true;
         if (btnClearSelection) btnClearSelection.disabled = true;
-        updateStatus();
+        setAudienceShowingOptions(false);
       }
 
       function handleShowToAudience() {
         if (!window.sendKaraokeMessage) return;
+
+        // Toggle behavior: if already showing, hide again; otherwise show.
+        if (isAudienceShowingOptions) {
+          window.sendKaraokeMessage("HIDE_OPTIONS", {});
+          setAudienceShowingOptions(false);
+          return;
+        }
+
         window.sendKaraokeMessage("SHOW_OPTIONS", {
           power: currentSuggestions.power,
           emotional: currentSuggestions.emotional,
           evergreen: currentSuggestions.evergreen,
         });
+        setAudienceShowingOptions(
+          !!(
+            currentSuggestions.power ||
+            currentSuggestions.emotional ||
+            currentSuggestions.evergreen
+          )
+        );
       }
 
       function setManualSelectedRow(slot, id) {
@@ -467,8 +504,8 @@
         if (btnClearSelection) btnClearSelection.disabled = true;
         updateStatus();
 
-        // Ensure projector is also unlocked and shows updated options.
-        if (window.sendKaraokeMessage) {
+        // If the audience view is currently showing options, update them.
+        if (isAudienceShowingOptions && window.sendKaraokeMessage) {
           window.sendKaraokeMessage("SHOW_OPTIONS", {
             power: currentSuggestions.power,
             emotional: currentSuggestions.emotional,
@@ -499,7 +536,9 @@
         nextSlot = slot;
         btnStart.disabled = false;
         if (btnClearSelection) btnClearSelection.disabled = false;
-        updateStatus();
+        // Once a choice is locked, we are no longer "showing options" to the audience.
+        // Turn off the audience-options state so status text and highlight are correct.
+        setAudienceShowingOptions(false);
         renderAllSlots();
 
         if (window.sendKaraokeMessage) {
@@ -517,8 +556,6 @@
         nextSlot = null;
         btnStart.disabled = true;
         if (btnClearSelection) btnClearSelection.disabled = true;
-
-        updateStatus();
         renderAllSlots();
 
         // Tell projector to show all options again (remove lock).
@@ -528,6 +565,8 @@
             emotional: currentSuggestions.emotional,
             evergreen: currentSuggestions.evergreen,
           });
+          // Only mark "shown to audience" when we could actually send the message.
+          setAudienceShowingOptions(true);
         }
       }
 
@@ -544,13 +583,51 @@
         // Mark as consumed, but keep status until next suggestion round
         btnStart.disabled = true;
         if (btnClearSelection) btnClearSelection.disabled = true;
-        updateStatus();
+        setAudienceShowingOptions(false);
       }
 
       function handleAdminKeydown(ev) {
         const key = ev.key;
+
+        // Ignore shortcuts while typing in inputs / textareas / contentEditable
+        const target = ev.target;
+        const tagName = target && target.tagName ? target.tagName.toLowerCase() : "";
+        const isTypingTarget =
+          tagName === "input" ||
+          tagName === "textarea" ||
+          (target && target.isContentEditable);
+        if (isTypingTarget) {
+          return;
+        }
+
         if (key === "1" || key === "2" || key === "3") {
           handleChoiceKey(key);
+          return;
+        }
+
+        // Keyboard shortcuts for admin controls
+        if (key === "Enter") {
+          if (btnStart && !btnStart.disabled) {
+            ev.preventDefault();
+            handleStartNextSong();
+          }
+          return;
+        }
+
+        if (key === "+") {
+          if (btnShow && !btnShow.disabled) {
+            ev.preventDefault();
+            handleShowToAudience();
+          }
+          return;
+        }
+
+        if (key === "-") {
+          if (btnClearSelection && !btnClearSelection.disabled) {
+            ev.preventDefault();
+            handleClearSelection();
+          }
+          return;
         }
       }
 
@@ -601,7 +678,7 @@
         }
 
         renderManualSongOptions();
-        updateStatus();
+        setAudienceShowingOptions(false);
       }
 
       window.addEventListener("DOMContentLoaded", init);
