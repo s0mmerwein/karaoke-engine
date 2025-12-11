@@ -701,6 +701,14 @@
           }
           return;
         }
+
+        if (key === ",") {
+          if (btnGenerate && !btnGenerate.disabled) {
+            ev.preventDefault();
+            handleGenerate();
+          }
+          return;
+        }
       }
 
       function handleBroadcast(msg) {
