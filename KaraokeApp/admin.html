@@ -88,6 +88,13 @@
           <div class="admin-status" id="status-text">
             No selection made yet.
           </div>
+          <button
+            id="btn-clear-state"
+            type="button"
+            class="btn btn-secondary btn-small"
+          >
+            Clear stored state
+          </button>
         </div>
       </section>
 
@@ -242,11 +249,48 @@
         }
       }
 
+      function clearStoredAdminState() {
+        const confirmed = window.confirm(
+          "Clear all saved karaoke state (played songs, suggestions, selection)? This cannot be undone."
+        );
+        if (!confirmed) return;
+
+        try {
+          window.localStorage.removeItem(ADMIN_STORAGE_KEY);
+        } catch (err) {
+          console.warn("[KARAOKE] Failed to clear stored admin state", err);
+        }
+
+        // Reset in-memory state
+        playedSongIds.clear();
+        currentSuggestions.power = null;
+        currentSuggestions.emotional = null;
+        currentSuggestions.evergreen = null;
+        nextSong = null;
+        nextSlot = null;
+        isAudienceShowingOptions = false;
+
+        // Reset UI
+        renderAllSlots();
+        renderManualSongOptions();
+        if (btnShow) btnShow.disabled = true;
+        btnStart.disabled = true;
+        if (btnClearSelection) btnClearSelection.disabled = true;
+        setAudienceShowingOptions(false);
+        updateStatus();
+
+        // Ensure projector view does not show stale options
+        if (window.sendKaraokeMessage) {
+          window.sendKaraokeMessage("HIDE_OPTIONS", {});
+        }
+      }
+
       // DOM references
       const btnGenerate = document.getElementById("btn-generate");
       const btnShow = document.getElementById("btn-show");
       const btnStart = document.getElementById("btn-start");
       const btnClearSelection = document.getElementById("btn-clear-selection");
+      const btnClearState = document.getElementById("btn-clear-state");
       const btnOpenProjector = document.getElementById("btn-open-projector");
       const statusText = document.getElementById("status-text");
       const manualSongTableBodies = {
@@ -867,6 +911,9 @@
         btnStart.addEventListener("click", handleStartNextSong);
         if (btnClearSelection) {
           btnClearSelection.addEventListener("click", handleClearSelection);
+        }
+        if (btnClearState) {
+          btnClearState.addEventListener("click", clearStoredAdminState);
         }
         if (btnOpenProjector) {
           btnOpenProjector.addEventListener("click", openOrFocusProjector);
