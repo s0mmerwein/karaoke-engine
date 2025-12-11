@@ -24,7 +24,23 @@
             >
               Clear stored state
             </button>
+            <button
+              id="btn-load-songs"
+              class="btn btn-header btn-small"
+              type="button"
+            >
+              Load playlist
+            </button>
           </div>
+          <div class="admin-header-buttons">
+            <input
+              type="text"
+              id="sheet-url-input"
+              class="admin-global-search-input"
+              placeholder="Spreadsheet / opensheet URL… (optional)"
+            />
+          </div>
+          <div id="sheet-status-message" class="admin-status-sub"></div>
         </div>
       </header>
 
@@ -205,6 +221,185 @@
     <script src="logic.js"></script>
 
     <script>
+      // Google Sheet configuration
+      const SHEET_ID = "HIER_DEINE_SPREADSHEET_ID_EINFÜGEN"; // from the Sheet URL
+      const SHEET_TAB = "Songs"; // or your tab name
+
+      // Load songs from Google Sheet
+      async function loadSongsFromSheet() {
+        const statusText = document.getElementById("status-text");
+        const sheetStatus = document.getElementById("sheet-status-message");
+        if (statusText) {
+          statusText.innerText = "Lade Playlist...";
+        }
+        if (sheetStatus) {
+          sheetStatus.innerText = "Lade Playlist...";
+        }
+
+        const sheetUrlInput = document.getElementById("sheet-url-input");
+        const rawInput =
+          sheetUrlInput && sheetUrlInput.value
+            ? sheetUrlInput.value.trim()
+            : "";
+        let customUrl = rawInput || null;
+
+        let url;
+        let parsedSheetId = null;
+
+        // Support both direct opensheet URLs and normal Google Sheets URLs.
+        if (customUrl && customUrl.includes("docs.google.com/spreadsheets/d/")) {
+          const match = customUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+          if (match && match[1]) {
+            parsedSheetId = match[1];
+            url = `https://opensheet.elk.sh/${parsedSheetId}/${encodeURIComponent(
+              SHEET_TAB
+            )}`;
+          } else {
+            url = customUrl;
+          }
+        } else if (customUrl) {
+          url = customUrl;
+        } else {
+          // No custom URL – fall back to configured SHEET_ID, but only if it is set.
+          if (!SHEET_ID || SHEET_ID === "HIER_DEINE_SPREADSHEET_ID_EINFÜGEN") {
+            if (sheetStatus) {
+              sheetStatus.innerText =
+                "Bitte gültige Sheet-URL eingeben oder SHEET_ID im Code setzen.";
+            }
+            throw new Error("Kein gültiges Google Sheet konfiguriert");
+          }
+          url = `https://opensheet.elk.sh/${SHEET_ID}/${encodeURIComponent(
+            SHEET_TAB
+          )}`;
+        }
+
+        // #region agent log
+        fetch("http://127.0.0.1:7242/ingest/d85561fa-4559-406c-9364-6a433213552a", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: "debug-session",
+            runId: "pre-fix",
+            hypothesisId: "H1",
+            location: "KaraokeApp/admin.html:loadSongsFromSheet:beforeFetch",
+            message: "About to fetch sheet URL",
+            data: { rawInput, customUrl, finalUrl: url, parsedSheetId, SHEET_ID, SHEET_TAB },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion agent log
+
+        const response = await fetch(url);
+
+        // #region agent log
+        fetch("http://127.0.0.1:7242/ingest/d85561fa-4559-406c-9364-6a433213552a", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: "debug-session",
+            runId: "pre-fix",
+            hypothesisId: "H2",
+            location: "KaraokeApp/admin.html:loadSongsFromSheet:afterFetch",
+            message: "Received response from sheet URL",
+            data: { url, status: response.status, ok: response.ok },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion agent log
+        if (!response.ok) {
+          throw new Error("Netzwerkfehler beim Laden der Playlist");
+        }
+
+        const data = await response.json();
+
+        const songs = data.map((song, index) => ({
+          ...song,
+          id: Number(song.id || index + 1),
+          category: (song.category || "").toLowerCase().trim(),
+        }));
+
+        window.SONGS = songs;
+
+        console.log("Songs geladen:", songs.length);
+
+        // #region agent log
+        fetch("http://127.0.0.1:7242/ingest/d85561fa-4559-406c-9364-6a433213552a", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: "debug-session",
+            runId: "pre-fix",
+            hypothesisId: "H3",
+            location: "KaraokeApp/admin.html:loadSongsFromSheet:afterParse",
+            message: "Parsed songs from sheet",
+            data: { count: songs.length },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion agent log
+
+        if (statusText) {
+          statusText.innerText = `${songs.length} Songs bereit!`;
+        }
+        if (sheetStatus) {
+          sheetStatus.innerText = `Erfolgreich geladen (${songs.length} Songs)`;
+        }
+
+        // Enable generate button once songs are ready
+        if (btnGenerate) {
+          btnGenerate.disabled = false;
+        }
+      }
+
+      async function initApp() {
+        try {
+          await loadSongsFromSheet(); // Try to load Google Sheet
+        } catch (e) {
+          console.warn("Nutze lokales Backup aus data.js", e);
+
+          // #region agent log
+          fetch("http://127.0.0.1:7242/ingest/d85561fa-4559-406c-9364-6a433213552a", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: "debug-session",
+              runId: "pre-fix",
+              hypothesisId: "H4",
+              location: "KaraokeApp/admin.html:initApp:catch",
+              message: "Error while loading songs from sheet",
+              data: {
+                errorMessage: e && e.message ? e.message : String(e),
+                hasWindowSongs: Array.isArray(window.SONGS),
+                windowSongsCount: Array.isArray(window.SONGS) ? window.SONGS.length : null,
+              },
+              timestamp: Date.now(),
+            }),
+          }).catch(() => {});
+          // #endregion agent log
+          const sheetStatus = document.getElementById("sheet-status-message");
+          // Fallback: if data.js is loaded, it should have set window.SONGS already
+          if (!Array.isArray(window.SONGS)) {
+            alert(
+              "Konnte Playlist nicht laden! Bitte prüfe die Google-Sheet-Veröffentlichung oder nutze das lokale Backup."
+            );
+            if (sheetStatus) {
+              sheetStatus.innerText =
+                "Fehler beim Laden. Prüfe die URL / Veröffentlichung.";
+            }
+          } else if (btnGenerate) {
+            // If fallback data is available, enable generate button
+            btnGenerate.disabled = false;
+            if (sheetStatus) {
+              sheetStatus.innerText =
+                "Google Sheet nicht erreichbar – nutze lokales Backup.";
+            }
+          }
+        } finally {
+          // Once songs are available (from sheet or fallback), restore UI state
+          restoreAdminStateOrDefaults();
+        }
+      }
+
       // Local state
       const playedSongIds = new Set();
       const currentSuggestions = {
@@ -290,6 +485,7 @@
       const btnClearSelection = document.getElementById("btn-clear-selection");
       const btnClearState = document.getElementById("btn-clear-state");
       const btnOpenProjector = document.getElementById("btn-open-projector");
+      const btnLoadSongs = document.getElementById("btn-load-songs");
       const statusText = document.getElementById("status-text");
       const manualSongTableBodies = {
         power: document.getElementById("manual-song-tbody-power"),
@@ -969,7 +1165,11 @@
       }
 
       function init() {
-        btnGenerate.addEventListener("click", handleGenerate);
+        if (btnGenerate) {
+          // Disable until songs are loaded from Google Sheet or fallback
+          btnGenerate.disabled = true;
+          btnGenerate.addEventListener("click", handleGenerate);
+        }
         btnShow.addEventListener("click", handleShowToAudience);
         btnStart.addEventListener("click", handleStartNextSong);
         if (btnClearSelection) {
@@ -980,6 +1180,14 @@
         }
         if (btnOpenProjector) {
           btnOpenProjector.addEventListener("click", openOrFocusProjector);
+        }
+        if (btnLoadSongs) {
+          btnLoadSongs.addEventListener("click", () => {
+            if (btnGenerate) {
+              btnGenerate.disabled = true;
+            }
+            initApp();
+          });
         }
         window.addEventListener("keydown", handleAdminKeydown);
 
@@ -1020,7 +1228,8 @@
           window.onKaraokeMessage(handleBroadcast);
         }
 
-        restoreAdminStateOrDefaults();
+        // Load songs first (Google Sheet with local fallback), then restore state/UI
+        initApp();
       }
 
       window.addEventListener("DOMContentLoaded", init);
