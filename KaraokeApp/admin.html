@@ -558,16 +558,8 @@
         if (btnClearSelection) btnClearSelection.disabled = true;
         renderAllSlots();
 
-        // Tell projector to show all options again (remove lock).
-        if (window.sendKaraokeMessage) {
-          window.sendKaraokeMessage("SHOW_OPTIONS", {
-            power: currentSuggestions.power,
-            emotional: currentSuggestions.emotional,
-            evergreen: currentSuggestions.evergreen,
-          });
-          // Only mark "shown to audience" when we could actually send the message.
-          setAudienceShowingOptions(true);
-        }
+        // Do not change what the audience currently sees; clearing is an admin-only action.
+        // If you want to re-show options to the audience, use "Show to Audience" instead.
       }
 
       function handleStartNextSong() {
