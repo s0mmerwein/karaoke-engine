@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "KaraokeApp/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/KaraokeApp/admin.html"
+    },
+    {
+      "src": "/admin",
+      "dest": "/KaraokeApp/admin.html"
+    },
+    {
+      "src": "/projector",
+      "dest": "/KaraokeApp/projector.html"
+    },
+    {
+      "src": "/KaraokeApp/(.*)",
+      "dest": "/KaraokeApp/$1"
+    }
+  ]
+}
+
+
