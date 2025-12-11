@@ -14,9 +14,12 @@
           <div class="admin-subtitle">
             Open this page in the laptop browser. Then open
             <span class="text-emotional">projector.html</span> in a second
-            window for the projector.
+            window for the projector – or use the button.
           </div>
         </div>
+        <button id="btn-open-projector" class="btn btn-secondary">
+          Open projector window
+        </button>
         <div class="kbd-hint">
           Buzzer:
           <span class="kbd">1</span> Power,
@@ -244,6 +247,7 @@
       const btnShow = document.getElementById("btn-show");
       const btnStart = document.getElementById("btn-start");
       const btnClearSelection = document.getElementById("btn-clear-selection");
+      const btnOpenProjector = document.getElementById("btn-open-projector");
       const statusText = document.getElementById("status-text");
       const manualSongTableBodies = {
         power: document.getElementById("manual-song-tbody-power"),
@@ -271,6 +275,23 @@
         emotional: document.getElementById("slot-emotional"),
         evergreen: document.getElementById("slot-evergreen"),
       };
+
+      // Keep a handle to the projector tab/window if we opened it,
+      // so subsequent clicks can focus it instead of spawning many tabs.
+      let projectorWindow = null;
+
+      function openOrFocusProjector() {
+        const url = "projector.html";
+        try {
+          if (projectorWindow && !projectorWindow.closed) {
+            projectorWindow.focus();
+            return;
+          }
+        } catch (e) {
+          // If the handle is no longer usable, fall through and reopen.
+        }
+        projectorWindow = window.open(url, "_blank", "noopener");
+      }
 
       function setAudienceShowingOptions(isShowing) {
         isAudienceShowingOptions = !!isShowing;
@@ -838,6 +859,9 @@
         btnStart.addEventListener("click", handleStartNextSong);
         if (btnClearSelection) {
           btnClearSelection.addEventListener("click", handleClearSelection);
+        }
+        if (btnOpenProjector) {
+          btnOpenProjector.addEventListener("click", openOrFocusProjector);
         }
         window.addEventListener("keydown", handleAdminKeydown);
 
