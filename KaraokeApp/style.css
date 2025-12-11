@@ -399,6 +399,16 @@ body.audience-showing-options .admin-status {
   background: rgba(0, 204, 255, 0.2);
 }
 
+.admin-manual-table tbody tr.played {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--color-muted);
+}
+
+.admin-manual-table tbody tr.played .col-title,
+.admin-manual-table tbody tr.played .col-artist {
+  opacity: 0.6;
+}
+
 .admin-manual-table .col-title {
   width: 50%;
 }

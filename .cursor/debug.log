@@ -1,0 +1,4 @@
+{"sessionId":"debug-session","runId":"initial","hypothesisId":"H1","location":"admin.html:handleStartNextSong","message":"Admin sending PLAY_SONG","data":{"youtubeId":"OPf0YbXqDm0"},"timestamp":1765445858886}
+{"sessionId":"debug-session","runId":"initial","hypothesisId":"H1","location":"admin.html:handleStartNextSong","message":"Admin sending PLAY_SONG","data":{"youtubeId":"9OCGGaKinQE"},"timestamp":1765445869727}
+{"sessionId":"debug-session","runId":"initial","hypothesisId":"H1","location":"admin.html:handleStartNextSong","message":"Admin sending PLAY_SONG","data":{"youtubeId":"21UJnJkNQXc"},"timestamp":1765445874751}
+{"sessionId":"debug-session","runId":"initial","hypothesisId":"H1","location":"admin.html:handleStartNextSong","message":"Admin sending PLAY_SONG","data":{"youtubeId":"B5q0rXq50tQ"},"timestamp":1765445891394}

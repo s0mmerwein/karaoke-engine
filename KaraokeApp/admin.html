@@ -266,9 +266,10 @@
         );
         if (!allInCat.length) return null;
 
+        // Only ever auto-pick songs that have not been played yet.
         const unplayed = allInCat.filter((s) => !playedSongIds.has(s.id));
-        const pool = unplayed.length ? unplayed : allInCat;
-        return randomChoice(pool);
+        if (!unplayed.length) return null;
+        return randomChoice(unplayed);
       }
 
       function renderSlot(slot, song) {
@@ -452,6 +453,11 @@
           filtered.forEach((song) => {
             const row = document.createElement("tr");
             row.dataset.songId = String(song.id);
+            const isPlayed = playedSongIds.has(song.id);
+            if (isPlayed) {
+              row.classList.add("played");
+              row.title = "Already played in this session";
+            }
 
             const titleCell = document.createElement("td");
             titleCell.className = "col-title";
@@ -564,7 +570,6 @@
 
       function handleStartNextSong() {
         if (!nextSong || !window.sendKaraokeMessage) return;
-
         window.sendKaraokeMessage("PLAY_SONG", {
           youtubeId: nextSong.youtubeId,
           song: nextSong,
@@ -576,6 +581,9 @@
         btnStart.disabled = true;
         if (btnClearSelection) btnClearSelection.disabled = true;
         setAudienceShowingOptions(false);
+
+        // Refresh manual selection tables so played songs are visibly greyed out.
+        renderManualSongOptions();
       }
 
       function handleAdminKeydown(ev) {
