@@ -208,6 +208,37 @@
       let nextSlot = null;
       let isAudienceShowingOptions = false;
 
+      // Persistence helpers
+      const ADMIN_STORAGE_KEY = "karaoke_admin_state_v1";
+
+      function getSongById(id) {
+        if (id == null || !Array.isArray(window.SONGS)) return null;
+        return window.SONGS.find((s) => s.id === id) || null;
+      }
+
+      function saveAdminState() {
+        try {
+          const state = {
+            playedSongIds: Array.from(playedSongIds),
+            suggestions: {
+              power: currentSuggestions.power ? currentSuggestions.power.id : null,
+              emotional: currentSuggestions.emotional
+                ? currentSuggestions.emotional.id
+                : null,
+              evergreen: currentSuggestions.evergreen
+                ? currentSuggestions.evergreen.id
+                : null,
+            },
+            nextSongId: nextSong ? nextSong.id : null,
+            nextSlot: nextSlot || null,
+            isAudienceShowingOptions: !!isAudienceShowingOptions,
+          };
+          window.localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(state));
+        } catch (err) {
+          console.warn("[KARAOKE] Failed to save admin state", err);
+        }
+      }
+
       // DOM references
       const btnGenerate = document.getElementById("btn-generate");
       const btnShow = document.getElementById("btn-show");
@@ -378,6 +409,7 @@
         btnStart.disabled = true;
         if (btnClearSelection) btnClearSelection.disabled = true;
         setAudienceShowingOptions(false);
+        saveAdminState();
       }
 
       function handleShowToAudience() {
@@ -387,6 +419,7 @@
         if (isAudienceShowingOptions) {
           window.sendKaraokeMessage("HIDE_OPTIONS", {});
           setAudienceShowingOptions(false);
+          saveAdminState();
           return;
         }
 
@@ -402,6 +435,7 @@
             currentSuggestions.evergreen
           )
         );
+        saveAdminState();
       }
 
       function setManualSelectedRow(slot, id) {
@@ -518,6 +552,8 @@
             evergreen: currentSuggestions.evergreen,
           });
         }
+
+        saveAdminState();
       }
 
       function slotFromKey(key) {
@@ -540,6 +576,9 @@
 
         nextSong = song;
         nextSlot = slot;
+        if (btnShow) {
+          btnShow.disabled = true;
+        }
         btnStart.disabled = false;
         if (btnClearSelection) btnClearSelection.disabled = false;
         // Once a choice is locked, we are no longer "showing options" to the audience.
@@ -553,6 +592,8 @@
             song,
           });
         }
+
+        saveAdminState();
       }
 
       function handleClearSelection() {
@@ -560,12 +601,20 @@
 
         nextSong = null;
         nextSlot = null;
+        if (btnShow) {
+          btnShow.disabled =
+            !currentSuggestions.power &&
+            !currentSuggestions.emotional &&
+            !currentSuggestions.evergreen;
+        }
         btnStart.disabled = true;
         if (btnClearSelection) btnClearSelection.disabled = true;
         renderAllSlots();
 
         // Do not change what the audience currently sees; clearing is an admin-only action.
         // If you want to re-show options to the audience, use "Show to Audience" instead.
+
+        saveAdminState();
       }
 
       function handleStartNextSong() {
@@ -584,6 +633,8 @@
 
         // Refresh manual selection tables so played songs are visibly greyed out.
         renderManualSongOptions();
+
+        saveAdminState();
       }
 
       function handleAdminKeydown(ev) {
@@ -641,6 +692,146 @@
         }
       }
 
+      function restoreAdminStateOrDefaults() {
+        try {
+          const raw = window.localStorage.getItem(ADMIN_STORAGE_KEY);
+          if (!raw) {
+            // No stored state – just initialise defaults.
+            renderManualSongOptions();
+            setAudienceShowingOptions(false);
+            updateStatus();
+            return;
+          }
+
+          // Helper to apply the stored state once songs are available
+          const applyRestoredState = () => {
+            try {
+              const latestRaw = window.localStorage.getItem(ADMIN_STORAGE_KEY);
+              if (!latestRaw) {
+                // State was cleared after initial load – respect that and keep defaults.
+                renderManualSongOptions();
+                setAudienceShowingOptions(false);
+                updateStatus();
+                return;
+              }
+
+              const state = JSON.parse(latestRaw);
+
+              // Restore played songs
+              playedSongIds.clear();
+              if (Array.isArray(state.playedSongIds)) {
+                state.playedSongIds.forEach((id) => {
+                  if (typeof id === "number") {
+                    playedSongIds.add(id);
+                  }
+                });
+              }
+
+              // Restore suggestions
+              const suggestions = state.suggestions || {};
+              currentSuggestions.power = getSongById(suggestions.power);
+              currentSuggestions.emotional = getSongById(suggestions.emotional);
+              currentSuggestions.evergreen = getSongById(suggestions.evergreen);
+
+              // Restore locked choice; ensure invariants stay consistent
+              nextSong = getSongById(state.nextSongId);
+              nextSlot = nextSong ? state.nextSlot || null : null;
+
+              // Re-render UI based on restored data
+              renderAllSlots();
+              renderManualSongOptions();
+
+              // Restore button states
+              const hasLockedChoice = !!nextSong && !!nextSlot;
+              btnShow.disabled =
+                hasLockedChoice ||
+                (!currentSuggestions.power &&
+                  !currentSuggestions.emotional &&
+                  !currentSuggestions.evergreen);
+
+              btnStart.disabled = !hasLockedChoice;
+              if (btnClearSelection) {
+                btnClearSelection.disabled = !hasLockedChoice;
+              }
+
+              // Determine if we currently have at least one valid suggestion
+              const hasAnySuggestions =
+                !!currentSuggestions.power ||
+                !!currentSuggestions.emotional ||
+                !!currentSuggestions.evergreen;
+
+              // Restore "options shown" state & status text, but only if suggestions exist
+              const restoredIsAudienceShowing =
+                !!state.isAudienceShowingOptions && hasAnySuggestions;
+              setAudienceShowingOptions(restoredIsAudienceShowing);
+
+              // Optionally sync the projector with the restored state.
+              if (window.sendKaraokeMessage) {
+                if (restoredIsAudienceShowing) {
+                  window.sendKaraokeMessage("SHOW_OPTIONS", {
+                    power: currentSuggestions.power,
+                    emotional: currentSuggestions.emotional,
+                    evergreen: currentSuggestions.evergreen,
+                  });
+                } else if (hasLockedChoice) {
+                  window.sendKaraokeMessage("LOCK_CHOICE", {
+                    slot: nextSlot,
+                    song: nextSong,
+                  });
+                } else if (
+                  state.isAudienceShowingOptions &&
+                  !restoredIsAudienceShowing
+                ) {
+                  // Previously showing options, but cannot restore suggestions now –
+                  // explicitly hide to prevent stale options on the projector.
+                  window.sendKaraokeMessage("HIDE_OPTIONS", {});
+                }
+              }
+            } catch (err) {
+              console.warn("[KARAOKE] Failed to apply restored admin state", err);
+              renderManualSongOptions();
+              setAudienceShowingOptions(false);
+              updateStatus();
+            }
+          };
+
+          // If songs are not yet available, defer restoration until they are,
+          // but stop after a reasonable number of attempts to avoid leaking timers.
+          if (!Array.isArray(window.SONGS)) {
+            let attempts = 0;
+            const maxAttempts = 50; // ~5 seconds with 100ms delay
+            const delayMs = 100;
+
+            const waitForSongsAndApply = () => {
+              if (Array.isArray(window.SONGS)) {
+                applyRestoredState();
+                return;
+              }
+              attempts += 1;
+              if (attempts >= maxAttempts) {
+                console.warn(
+                  "[KARAOKE] SONGS not available after waiting; keeping current admin state"
+                );
+                // Do not schedule further retries; leave UI in its current (empty) state.
+                return;
+              }
+              window.setTimeout(waitForSongsAndApply, delayMs);
+            };
+
+            waitForSongsAndApply();
+            return;
+          }
+
+          // Songs are already available – apply immediately.
+          applyRestoredState();
+        } catch (err) {
+          console.warn("[KARAOKE] Failed to restore admin state", err);
+          renderManualSongOptions();
+          setAudienceShowingOptions(false);
+          updateStatus();
+        }
+      }
+
       function init() {
         btnGenerate.addEventListener("click", handleGenerate);
         btnShow.addEventListener("click", handleShowToAudience);
@@ -677,8 +868,7 @@
           window.onKaraokeMessage(handleBroadcast);
         }
 
-        renderManualSongOptions();
-        setAudienceShowingOptions(false);
+        restoreAdminStateOrDefaults();
       }
 
       window.addEventListener("DOMContentLoaded", init);
