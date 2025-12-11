@@ -273,39 +273,7 @@
           )}`;
         }
 
-        // #region agent log
-        fetch("http://127.0.0.1:7242/ingest/d85561fa-4559-406c-9364-6a433213552a", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: "debug-session",
-            runId: "pre-fix",
-            hypothesisId: "H1",
-            location: "KaraokeApp/admin.html:loadSongsFromSheet:beforeFetch",
-            message: "About to fetch sheet URL",
-            data: { rawInput, customUrl, finalUrl: url, parsedSheetId, SHEET_ID, SHEET_TAB },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion agent log
-
         const response = await fetch(url);
-
-        // #region agent log
-        fetch("http://127.0.0.1:7242/ingest/d85561fa-4559-406c-9364-6a433213552a", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: "debug-session",
-            runId: "pre-fix",
-            hypothesisId: "H2",
-            location: "KaraokeApp/admin.html:loadSongsFromSheet:afterFetch",
-            message: "Received response from sheet URL",
-            data: { url, status: response.status, ok: response.ok },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion agent log
         if (!response.ok) {
           throw new Error("Netzwerkfehler beim Laden der Playlist");
         }
@@ -321,22 +289,6 @@
         window.SONGS = songs;
 
         console.log("Songs geladen:", songs.length);
-
-        // #region agent log
-        fetch("http://127.0.0.1:7242/ingest/d85561fa-4559-406c-9364-6a433213552a", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: "debug-session",
-            runId: "pre-fix",
-            hypothesisId: "H3",
-            location: "KaraokeApp/admin.html:loadSongsFromSheet:afterParse",
-            message: "Parsed songs from sheet",
-            data: { count: songs.length },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion agent log
 
         if (statusText) {
           statusText.innerText = `${songs.length} Songs bereit!`;
@@ -356,26 +308,6 @@
           await loadSongsFromSheet(); // Try to load Google Sheet
         } catch (e) {
           console.warn("Nutze lokales Backup aus data.js", e);
-
-          // #region agent log
-          fetch("http://127.0.0.1:7242/ingest/d85561fa-4559-406c-9364-6a433213552a", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              sessionId: "debug-session",
-              runId: "pre-fix",
-              hypothesisId: "H4",
-              location: "KaraokeApp/admin.html:initApp:catch",
-              message: "Error while loading songs from sheet",
-              data: {
-                errorMessage: e && e.message ? e.message : String(e),
-                hasWindowSongs: Array.isArray(window.SONGS),
-                windowSongsCount: Array.isArray(window.SONGS) ? window.SONGS.length : null,
-              },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-          // #endregion agent log
           const sheetStatus = document.getElementById("sheet-status-message");
           // Fallback: if data.js is loaded, it should have set window.SONGS already
           if (!Array.isArray(window.SONGS)) {
