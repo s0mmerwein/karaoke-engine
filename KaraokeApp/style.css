@@ -194,6 +194,18 @@ button {
   gap: 16px;
 }
 
+.admin-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.admin-header-buttons {
+  display: flex;
+  gap: 8px;
+}
+
 .admin-header h1 {
   font-size: 1.5rem;
   margin: 0;
@@ -202,6 +214,16 @@ button {
 .admin-subtitle {
   font-size: 0.9rem;
   color: var(--color-muted);
+}
+
+.btn-header {
+  background: #2a2a3a;
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--color-muted);
+}
+
+.btn-header:hover:not(:disabled) {
+  background: #333347;
 }
 
 .admin-columns {
@@ -312,6 +334,14 @@ body.audience-showing-options .admin-status {
   font-size: 0.9rem;
   font-weight: 500;
   margin-bottom: 2px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-global-search-input {
+  min-width: 220px;
 }
 
 .admin-manual-row {

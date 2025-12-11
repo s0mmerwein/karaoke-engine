@@ -11,20 +11,20 @@
       <header class="admin-header">
         <div>
           <h1>Karaoke Flow – Selector</h1>
-          <div class="admin-subtitle">
-            Open this page in the laptop browser. Then open
-            <span class="text-emotional">projector.html</span> in a second
-            window for the projector – or use the button.
-          </div>
         </div>
-        <button id="btn-open-projector" class="btn btn-secondary">
-          Open projector window
-        </button>
-        <div class="kbd-hint">
-          Buzzer:
-          <span class="kbd">1</span> Power,
-          <span class="kbd">2</span> Emotional,
-          <span class="kbd">3</span> Evergreen
+        <div class="admin-header-right">
+          <div class="admin-header-buttons">
+            <button id="btn-open-projector" class="btn btn-header btn-small">
+              Open projector window
+            </button>
+            <button
+              id="btn-clear-state"
+              type="button"
+              class="btn btn-header btn-small"
+            >
+              Clear stored state
+            </button>
+          </div>
         </div>
       </header>
 
@@ -88,25 +88,23 @@
           <div class="admin-status" id="status-text">
             No selection made yet.
           </div>
-          <button
-            id="btn-clear-state"
-            type="button"
-            class="btn btn-secondary btn-small"
-          >
-            Clear stored state
-          </button>
         </div>
       </section>
 
       <section class="admin-manual">
         <div class="admin-manual-header">
-          Manual song selection from database
+          <div>Manual song selection from database</div>
+          <input
+            type="text"
+            id="manual-search-global"
+            class="admin-global-search-input"
+            placeholder="Search all categories…"
+          />
         </div>
         <div class="admin-manual-row admin-manual-row-bottom">
           <div class="admin-manual-col">
             <div class="admin-manual-col-header text-power">Power</div>
             <label class="admin-manual-field admin-manual-search">
-              Search
               <input
                 type="text"
                 id="manual-search-power"
@@ -135,7 +133,6 @@
           <div class="admin-manual-col">
             <div class="admin-manual-col-header text-emotional">Emotional</div>
             <label class="admin-manual-field admin-manual-search">
-              Search
               <input
                 type="text"
                 id="manual-search-emotional"
@@ -166,7 +163,6 @@
               Evergreen
             </div>
             <label class="admin-manual-field admin-manual-search">
-              Search
               <input
                 type="text"
                 id="manual-search-evergreen"
@@ -191,13 +187,6 @@
               Set to slot 3
             </button>
           </div>
-        </div>
-        <div class="admin-manual-hint">
-          Choose a song from the database and set it as a suggestion for the
-          matching slot. The audience can then vote as usual with
-          <span class="text-power">1</span>,
-          <span class="text-emotional">2</span> or
-          <span class="text-evergreen">3</span>.
         </div>
       </section>
     </div>
@@ -303,6 +292,9 @@
         emotional: document.getElementById("manual-search-emotional"),
         evergreen: document.getElementById("manual-search-evergreen"),
       };
+      const manualGlobalSearchInput = document.getElementById(
+        "manual-search-global"
+      );
       const btnManualSetBySlot = {
         power: document.getElementById("btn-manual-set-power"),
         emotional: document.getElementById("btn-manual-set-emotional"),
@@ -391,7 +383,7 @@
           slot +
           " visible" +
           (nextSong && nextSong.id === song.id ? " locked" : "");
-        ticket.style.pointerEvents = "none";
+        ticket.style.pointerEvents = "auto";
 
         const keyLabel = slot === "power" ? "1" : slot === "emotional" ? "2" : "3";
 
@@ -417,6 +409,11 @@
           song.youtubeId +
           "</div>" +
           "</div>";
+
+        ticket.addEventListener("click", () => {
+          // Mirror the behaviour of pressing 1/2/3 to lock a choice.
+          handleChoiceKey(keyLabel);
+        });
 
         shell.appendChild(ticket);
       }
@@ -531,6 +528,10 @@
         const slotsToRender = slotFilter
           ? [slotFilter]
           : ["power", "emotional", "evergreen"];
+        const globalSearch =
+          manualGlobalSearchInput && manualGlobalSearchInput.value
+            ? manualGlobalSearchInput.value.toLowerCase()
+            : "";
 
         slotsToRender.forEach((slot) => {
           const body = manualSongTableBodies[slot];
@@ -540,13 +541,19 @@
           manualSelectedSongId[slot] = null;
 
           const input = manualSearchInputs[slot];
-          const search = input ? input.value.toLowerCase() : "";
+          const slotSearch = input ? input.value.toLowerCase() : "";
 
           const filtered = allSongs.filter((song) => {
             if (song.category !== slot) return false;
-            if (!search) return true;
             const haystack = (song.title + " " + song.artist).toLowerCase();
-            return haystack.includes(search);
+
+            // If a global search term is present, use it for all categories.
+            if (globalSearch) {
+              return haystack.includes(globalSearch);
+            }
+
+            if (!slotSearch) return true;
+            return haystack.includes(slotSearch);
           });
 
           filtered.forEach((song) => {
@@ -631,11 +638,6 @@
       function handleChoiceKey(key) {
         const slot = slotFromKey(key);
         if (!slot) return;
-        if (nextSong) {
-          // Already locked for this round, ignore further keys.
-          return;
-        }
-
         const song = currentSuggestions[slot];
         if (!song) return;
 
@@ -927,6 +929,11 @@
             );
           }
         });
+        if (manualGlobalSearchInput) {
+          manualGlobalSearchInput.addEventListener("input", () =>
+            renderManualSongOptions()
+          );
+        }
         if (btnManualSetBySlot.power) {
           btnManualSetBySlot.power.addEventListener("click", () =>
             handleManualSet("power")
