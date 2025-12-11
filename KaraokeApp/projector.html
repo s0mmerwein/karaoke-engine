@@ -140,7 +140,7 @@
       }
 
       function lockChoice(payload) {
-        const { slot } = payload || {};
+        const { slot, song } = payload || {};
         if (!slot || !ticketEls[slot]) return;
 
         Object.entries(ticketEls).forEach(([key, el]) => {
@@ -148,6 +148,16 @@
             el.classList.add("locked");
             el.classList.remove("hidden");
             el.classList.add("visible");
+
+            // If song details are provided, ensure the ticket text matches
+            // the locked choice (works for both suggestion-based and
+            // manually forced selections).
+            if (song) {
+              const titleEl = el.querySelector(".ticket-title");
+              const artistEl = el.querySelector(".ticket-artist");
+              if (titleEl) titleEl.textContent = song.title || "";
+              if (artistEl) artistEl.textContent = song.artist || "";
+            }
           } else {
             el.classList.remove("locked");
             el.classList.remove("visible");

@@ -188,6 +188,15 @@
             </button>
           </div>
         </div>
+        <div class="admin-manual-footer">
+          <button
+            id="btn-manual-force-next"
+            class="btn btn-danger btn-small"
+            disabled
+          >
+            Force Next from manual selection
+          </button>
+        </div>
       </section>
     </div>
 
@@ -300,11 +309,15 @@
         emotional: document.getElementById("btn-manual-set-emotional"),
         evergreen: document.getElementById("btn-manual-set-evergreen"),
       };
+      const btnManualForceNext = document.getElementById(
+        "btn-manual-force-next"
+      );
       const manualSelectedSongId = {
         power: null,
         emotional: null,
         evergreen: null,
       };
+      let lastManualSelected = null;
 
       const slotEls = {
         power: document.getElementById("slot-power"),
@@ -519,11 +532,23 @@
         if (btn) {
           btn.disabled = !id;
         }
+
+        // Track the last globally selected manual song so we can force it as next.
+        lastManualSelected = id ? { slot, id } : null;
+        if (btnManualForceNext) {
+          btnManualForceNext.disabled = !lastManualSelected;
+        }
       }
 
       function renderManualSongOptions(slotFilter) {
         if (!window.SONGS) return;
         const allSongs = Array.isArray(window.SONGS) ? window.SONGS : [];
+
+         // Reset global manual selection whenever we re-render the manual tables.
+        lastManualSelected = null;
+        if (btnManualForceNext) {
+          btnManualForceNext.disabled = true;
+        }
 
         const slotsToRender = slotFilter
           ? [slotFilter]
@@ -589,6 +614,42 @@
             btn.disabled = filtered.length === 0 || !manualSelectedSongId[slot];
           }
         });
+      }
+
+      function handleManualForceNext() {
+        if (!lastManualSelected || !window.SONGS) return;
+
+        const { slot, id } = lastManualSelected;
+        const allSongs = Array.isArray(window.SONGS) ? window.SONGS : [];
+        const song = allSongs.find((s) => s.id === id);
+        if (!song) return;
+
+        nextSong = song;
+        // Use the song's category as the effective slot so status text and
+        // projector behaviour stay consistent with normal choices.
+        nextSlot = song.category || slot || "power";
+
+        if (btnShow) {
+          btnShow.disabled = true;
+        }
+        btnStart.disabled = false;
+        if (btnClearSelection) {
+          btnClearSelection.disabled = false;
+        }
+
+        // Forcing a next song bypasses showing options to the audience.
+        setAudienceShowingOptions(false);
+        renderAllSlots();
+        updateStatus();
+
+        if (window.sendKaraokeMessage) {
+          window.sendKaraokeMessage("LOCK_CHOICE", {
+            slot: nextSlot,
+            song: nextSong,
+          });
+        }
+
+        saveAdminState();
       }
 
       function handleManualSet(slot) {
@@ -948,6 +1009,11 @@
           btnManualSetBySlot.evergreen.addEventListener("click", () =>
             handleManualSet("evergreen")
           );
+        }
+
+        if (btnManualForceNext) {
+          btnManualForceNext.disabled = true;
+          btnManualForceNext.addEventListener("click", handleManualForceNext);
         }
 
         if (window.onKaraokeMessage) {
