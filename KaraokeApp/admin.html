@@ -76,6 +76,9 @@
           </button>
         </div>
         <div class="admin-controls-right">
+          <button id="btn-clear-selection" class="btn btn-secondary" disabled>
+            Auswahl zurücksetzen
+          </button>
           <button id="btn-start" class="btn btn-danger" disabled>
             Start Next Song
           </button>
@@ -208,6 +211,7 @@
       const btnGenerate = document.getElementById("btn-generate");
       const btnShow = document.getElementById("btn-show");
       const btnStart = document.getElementById("btn-start");
+      const btnClearSelection = document.getElementById("btn-clear-selection");
       const statusText = document.getElementById("status-text");
       const manualSongTableBodies = {
         power: document.getElementById("manual-song-tbody-power"),
@@ -349,6 +353,7 @@
         nextSong = null;
         nextSlot = null;
         btnStart.disabled = true;
+        if (btnClearSelection) btnClearSelection.disabled = true;
         updateStatus();
       }
 
@@ -454,6 +459,22 @@
           !currentSuggestions.power &&
           !currentSuggestions.emotional &&
           !currentSuggestions.evergreen;
+
+        // Reset any previously locked choice since suggestions changed.
+        nextSong = null;
+        nextSlot = null;
+        btnStart.disabled = true;
+        if (btnClearSelection) btnClearSelection.disabled = true;
+        updateStatus();
+
+        // Ensure projector is also unlocked and shows updated options.
+        if (window.sendKaraokeMessage) {
+          window.sendKaraokeMessage("SHOW_OPTIONS", {
+            power: currentSuggestions.power,
+            emotional: currentSuggestions.emotional,
+            evergreen: currentSuggestions.evergreen,
+          });
+        }
       }
 
       function slotFromKey(key) {
@@ -477,6 +498,7 @@
         nextSong = song;
         nextSlot = slot;
         btnStart.disabled = false;
+        if (btnClearSelection) btnClearSelection.disabled = false;
         updateStatus();
         renderAllSlots();
 
@@ -484,6 +506,27 @@
           window.sendKaraokeMessage("LOCK_CHOICE", {
             slot,
             song,
+          });
+        }
+      }
+
+      function handleClearSelection() {
+        if (!nextSong) return;
+
+        nextSong = null;
+        nextSlot = null;
+        btnStart.disabled = true;
+        if (btnClearSelection) btnClearSelection.disabled = true;
+
+        updateStatus();
+        renderAllSlots();
+
+        // Tell projector to show all options again (remove lock).
+        if (window.sendKaraokeMessage) {
+          window.sendKaraokeMessage("SHOW_OPTIONS", {
+            power: currentSuggestions.power,
+            emotional: currentSuggestions.emotional,
+            evergreen: currentSuggestions.evergreen,
           });
         }
       }
@@ -500,6 +543,7 @@
 
         // Mark as consumed, but keep status until next suggestion round
         btnStart.disabled = true;
+        if (btnClearSelection) btnClearSelection.disabled = true;
         updateStatus();
       }
 
@@ -524,6 +568,9 @@
         btnGenerate.addEventListener("click", handleGenerate);
         btnShow.addEventListener("click", handleShowToAudience);
         btnStart.addEventListener("click", handleStartNextSong);
+        if (btnClearSelection) {
+          btnClearSelection.addEventListener("click", handleClearSelection);
+        }
         window.addEventListener("keydown", handleAdminKeydown);
 
         Object.entries(manualSearchInputs).forEach(([slot, input]) => {
