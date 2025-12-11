@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <title>Karaoke Admin</title>
@@ -12,9 +12,9 @@
         <div>
           <h1>Karaoke Flow – Selector</h1>
           <div class="admin-subtitle">
-            Öffne diese Seite im Laptop-Browser. Öffne danach
-            <span class="text-emotional">projector.html</span> in einem zweiten
-            Fenster für den Beamer.
+            Open this page in the laptop browser. Then open
+            <span class="text-emotional">projector.html</span> in a second
+            window for the projector.
           </div>
         </div>
         <div class="kbd-hint">
@@ -33,7 +33,7 @@
           </div>
           <div class="admin-ticket-shell">
             <div class="admin-ticket-empty">
-              Noch keine Empfehlung. Nutze
+              No suggestion yet. Use
               <span class="text-power">Generate Suggestions</span>.
             </div>
           </div>
@@ -46,7 +46,7 @@
           </div>
           <div class="admin-ticket-shell">
             <div class="admin-ticket-empty">
-              Noch keine Empfehlung. Nutze
+              No suggestion yet. Use
               <span class="text-power">Generate Suggestions</span>.
             </div>
           </div>
@@ -59,7 +59,7 @@
           </div>
           <div class="admin-ticket-shell">
             <div class="admin-ticket-empty">
-              Noch keine Empfehlung. Nutze
+              No suggestion yet. Use
               <span class="text-power">Generate Suggestions</span>.
             </div>
           </div>
@@ -77,38 +77,38 @@
         </div>
         <div class="admin-controls-right">
           <button id="btn-clear-selection" class="btn btn-secondary" disabled>
-            Auswahl zurücksetzen
+            Reset selection
           </button>
           <button id="btn-start" class="btn btn-danger" disabled>
             Start Next Song
           </button>
           <div class="admin-status" id="status-text">
-            Noch keine Auswahl getroffen.
+            No selection made yet.
           </div>
         </div>
       </section>
 
       <section class="admin-manual">
         <div class="admin-manual-header">
-          Manuelle Song-Auswahl aus Datenbank
+          Manual song selection from database
         </div>
         <div class="admin-manual-row admin-manual-row-bottom">
           <div class="admin-manual-col">
             <div class="admin-manual-col-header text-power">Power</div>
             <label class="admin-manual-field admin-manual-search">
-              Suche
+              Search
               <input
                 type="text"
                 id="manual-search-power"
-                placeholder="Titel oder Künstler suchen …"
+                placeholder="Search by title or artist…"
               />
             </label>
             <div class="admin-manual-table-wrapper">
               <table class="admin-manual-table">
                 <thead>
                   <tr>
-                    <th>Titel</th>
-                    <th>Interpret</th>
+                    <th>Title</th>
+                    <th>Artist</th>
                   </tr>
                 </thead>
                 <tbody id="manual-song-tbody-power"></tbody>
@@ -118,26 +118,26 @@
               id="btn-manual-set-power"
               class="btn btn-secondary btn-small"
             >
-              In Slot 1 übernehmen
+              Set to slot 1
             </button>
           </div>
 
           <div class="admin-manual-col">
             <div class="admin-manual-col-header text-emotional">Emotional</div>
             <label class="admin-manual-field admin-manual-search">
-              Suche
+              Search
               <input
                 type="text"
                 id="manual-search-emotional"
-                placeholder="Titel oder Künstler suchen …"
+                placeholder="Search by title or artist…"
               />
             </label>
             <div class="admin-manual-table-wrapper">
               <table class="admin-manual-table">
                 <thead>
                   <tr>
-                    <th>Titel</th>
-                    <th>Interpret</th>
+                    <th>Title</th>
+                    <th>Artist</th>
                   </tr>
                 </thead>
                 <tbody id="manual-song-tbody-emotional"></tbody>
@@ -147,7 +147,7 @@
               id="btn-manual-set-emotional"
               class="btn btn-secondary btn-small"
             >
-              In Slot 2 übernehmen
+              Set to slot 2
             </button>
           </div>
 
@@ -156,19 +156,19 @@
               Evergreen
             </div>
             <label class="admin-manual-field admin-manual-search">
-              Suche
+              Search
               <input
                 type="text"
                 id="manual-search-evergreen"
-                placeholder="Titel oder Künstler suchen …"
+                placeholder="Search by title or artist…"
               />
             </label>
             <div class="admin-manual-table-wrapper">
               <table class="admin-manual-table">
                 <thead>
                   <tr>
-                    <th>Titel</th>
-                    <th>Interpret</th>
+                    <th>Title</th>
+                    <th>Artist</th>
                   </tr>
                 </thead>
                 <tbody id="manual-song-tbody-evergreen"></tbody>
@@ -178,16 +178,16 @@
               id="btn-manual-set-evergreen"
               class="btn btn-secondary btn-small"
             >
-              In Slot 3 übernehmen
+              Set to slot 3
             </button>
           </div>
         </div>
         <div class="admin-manual-hint">
-          Wähle einen Song aus der Datenbank und setze ihn als Vorschlag für den
-          passenden Slot. Das Publikum kann dann wie gewohnt mit
+          Choose a song from the database and set it as a suggestion for the
+          matching slot. The audience can then vote as usual with
           <span class="text-power">1</span>,
-          <span class="text-emotional">2</span> oder
-          <span class="text-evergreen">3</span> auswählen.
+          <span class="text-emotional">2</span> or
+          <span class="text-evergreen">3</span>.
         </div>
       </section>
     </div>
@@ -270,7 +270,7 @@
           const empty = document.createElement("div");
           empty.className = "admin-ticket-empty";
           empty.textContent =
-            "Noch keine Empfehlung. Nutze Generate Suggestions.";
+            "No suggestion yet. Use Generate Suggestions.";
           shell.appendChild(empty);
           return;
         }
@@ -320,7 +320,7 @@
       function updateStatus() {
         if (!nextSong) {
           statusText.innerHTML =
-            'Noch keine Auswahl getroffen. Nutze <span class="text-power">1</span>, <span class="text-emotional">2</span> oder <span class="text-evergreen">3</span>.';
+            'No selection made yet. Use <span class="text-power">1</span>, <span class="text-emotional">2</span> or <span class="text-evergreen">3</span>.';
           return;
         }
         statusText.innerHTML =
