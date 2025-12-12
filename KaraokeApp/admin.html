@@ -11,50 +11,20 @@
       <header class="admin-header">
         <div>
           <h1>Karaoke Flow – Selector</h1>
-        </div>
-        <div class="admin-header-right">
-          <div class="admin-header-buttons">
-            <button id="btn-open-projector" class="btn btn-header btn-small">
-              Open projector window
-            </button>
-            <button
-              id="btn-clear-state"
-              type="button"
-              class="btn btn-header btn-small"
-            >
-              Clear stored state
-            </button>
-            <div class="sheet-dropdown" id="sheet-dropdown">
-              <button
-                id="btn-load-songs"
-                class="btn btn-header btn-small"
-                type="button"
-              >
-                Load playlist
-              </button>
-              <div class="sheet-dropdown-panel">
-                <div class="sheet-dropdown-label">
-                  Spreadsheet / opensheet URL
-                </div>
-                <input
-                  type="text"
-                  id="sheet-url-input"
-                  class="admin-global-search-input"
-                  placeholder="Spreadsheet / opensheet URL… (optional)"
-                />
-                <div class="sheet-dropdown-hint">
-                  Leave empty to use the configured default sheet.
-                </div>
-                <div
-                  id="sheet-load-state-description"
-                  class="sheet-dropdown-state"
-                >
-                  No playlist loaded yet.
-                </div>
-              </div>
-            </div>
+          <div class="admin-subtitle">
+            Open this page in the laptop browser. Then open
+            <span class="text-emotional">projector.html</span> in a second
+            window for the projector – or use the button.
           </div>
-          <div id="sheet-status-message" class="admin-status-sub"></div>
+        </div>
+        <button id="btn-open-projector" class="btn btn-secondary">
+          Open projector window
+        </button>
+        <div class="kbd-hint">
+          Buzzer:
+          <span class="kbd">1</span> Power,
+          <span class="kbd">2</span> Emotional,
+          <span class="kbd">3</span> Evergreen
         </div>
       </header>
 
@@ -118,23 +88,25 @@
           <div class="admin-status" id="status-text">
             No selection made yet.
           </div>
+          <button
+            id="btn-clear-state"
+            type="button"
+            class="btn btn-secondary btn-small"
+          >
+            Clear stored state
+          </button>
         </div>
       </section>
 
       <section class="admin-manual">
         <div class="admin-manual-header">
-          <div>Manual song selection from database</div>
-          <input
-            type="text"
-            id="manual-search-global"
-            class="admin-global-search-input"
-            placeholder="Search all categories…"
-          />
+          Manual song selection from database
         </div>
         <div class="admin-manual-row admin-manual-row-bottom">
           <div class="admin-manual-col">
             <div class="admin-manual-col-header text-power">Power</div>
             <label class="admin-manual-field admin-manual-search">
+              Search
               <input
                 type="text"
                 id="manual-search-power"
@@ -163,6 +135,7 @@
           <div class="admin-manual-col">
             <div class="admin-manual-col-header text-emotional">Emotional</div>
             <label class="admin-manual-field admin-manual-search">
+              Search
               <input
                 type="text"
                 id="manual-search-emotional"
@@ -193,6 +166,7 @@
               Evergreen
             </div>
             <label class="admin-manual-field admin-manual-search">
+              Search
               <input
                 type="text"
                 id="manual-search-evergreen"
@@ -218,14 +192,12 @@
             </button>
           </div>
         </div>
-        <div class="admin-manual-footer">
-          <button
-            id="btn-manual-force-next"
-            class="btn btn-danger btn-small"
-            disabled
-          >
-            Force Next from manual selection
-          </button>
+        <div class="admin-manual-hint">
+          Choose a song from the database and set it as a suggestion for the
+          matching slot. The audience can then vote as usual with
+          <span class="text-power">1</span>,
+          <span class="text-emotional">2</span> or
+          <span class="text-evergreen">3</span>.
         </div>
       </section>
     </div>
@@ -235,136 +207,6 @@
     <script src="logic.js"></script>
 
     <script>
-      // Google Sheet configuration
-      const SHEET_ID = "HIER_DEINE_SPREADSHEET_ID_EINFÜGEN"; // from the Sheet URL
-      const SHEET_TAB = "Songs"; // or your tab name
-
-      // Load songs from Google Sheet
-      async function loadSongsFromSheet(options = {}) {
-        const { updateLoadState = true } = options;
-        const statusText = document.getElementById("status-text");
-        const sheetStatus = document.getElementById("sheet-status-message");
-        if (statusText) {
-          statusText.innerText = "Lade Playlist...";
-        }
-        if (sheetStatus) {
-          sheetStatus.innerText = "Lade Playlist...";
-        }
-
-        // Whenever a manual load is triggered, visually reset to neutral while loading.
-        if (updateLoadState) {
-          setLoadButtonState(LOAD_STATE.NEUTRAL);
-        }
-
-        const sheetUrlInput = document.getElementById("sheet-url-input");
-        const rawInput =
-          sheetUrlInput && sheetUrlInput.value
-            ? sheetUrlInput.value.trim()
-            : "";
-        let customUrl = rawInput || null;
-
-        let url;
-        let parsedSheetId = null;
-
-        // Support both direct opensheet URLs and normal Google Sheets URLs.
-        if (customUrl && customUrl.includes("docs.google.com/spreadsheets/d/")) {
-          const match = customUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
-          if (match && match[1]) {
-            parsedSheetId = match[1];
-            url = `https://opensheet.elk.sh/${parsedSheetId}/${encodeURIComponent(
-              SHEET_TAB
-            )}`;
-          } else {
-            url = customUrl;
-          }
-        } else if (customUrl) {
-          url = customUrl;
-        } else {
-          // No custom URL – fall back to configured SHEET_ID, but only if it is set.
-          if (!SHEET_ID || SHEET_ID === "HIER_DEINE_SPREADSHEET_ID_EINFÜGEN") {
-            if (sheetStatus) {
-              sheetStatus.innerText =
-                "Bitte gültige Sheet-URL eingeben oder SHEET_ID im Code setzen.";
-            }
-            throw new Error("Kein gültiges Google Sheet konfiguriert");
-          }
-          url = `https://opensheet.elk.sh/${SHEET_ID}/${encodeURIComponent(
-            SHEET_TAB
-          )}`;
-        }
-
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error("Netzwerkfehler beim Laden der Playlist");
-        }
-
-        const data = await response.json();
-
-        const songs = data.map((song, index) => ({
-          ...song,
-          id: Number(song.id || index + 1),
-          category: (song.category || "").toLowerCase().trim(),
-        }));
-
-        window.SONGS = songs;
-
-        console.log("Songs geladen:", songs.length);
-
-        if (statusText) {
-          statusText.innerText = `${songs.length} Songs bereit!`;
-        }
-        if (sheetStatus) {
-          sheetStatus.innerText = "";
-        }
-
-        // Mark visual state as successful when remote or custom sheet load works.
-        if (updateLoadState) {
-          setLoadButtonState(LOAD_STATE.SUCCESS);
-        }
-
-        // Enable generate button once songs are ready
-        if (btnGenerate) {
-          btnGenerate.disabled = false;
-        }
-      }
-
-      async function initApp(options = {}) {
-        const { updateLoadState = true } = options;
-        try {
-          await loadSongsFromSheet({ updateLoadState }); // Try to load Google Sheet
-        } catch (e) {
-          console.warn("Nutze lokales Backup aus data.js", e);
-          const sheetStatus = document.getElementById("sheet-status-message");
-          // Fallback: if data.js is loaded, it should have set window.SONGS already
-          if (!Array.isArray(window.SONGS)) {
-            alert(
-              "Konnte Playlist nicht laden! Bitte prüfe die Google-Sheet-Veröffentlichung oder nutze das lokale Backup."
-            );
-            if (sheetStatus) {
-              sheetStatus.innerText =
-                "Fehler beim Laden. Prüfe die URL / Veröffentlichung.";
-            }
-            // No songs available at all – mark as failed.
-            if (updateLoadState) {
-              setLoadButtonState(LOAD_STATE.ERROR);
-            }
-          } else if (btnGenerate) {
-            // If fallback data is available, enable generate button
-            btnGenerate.disabled = false;
-            if (sheetStatus) {
-              sheetStatus.innerText = "";
-            }
-            // Fallback still provides a working playlist – treat as success.
-            if (updateLoadState) {
-              setLoadButtonState(LOAD_STATE.SUCCESS);
-            }
-          }
-        } finally {
-          // Once songs are available (from sheet or fallback), restore UI state
-          restoreAdminStateOrDefaults();
-        }
-      }
-
       // Local state
       const playedSongIds = new Set();
       const currentSuggestions = {
@@ -450,12 +292,6 @@
       const btnClearSelection = document.getElementById("btn-clear-selection");
       const btnClearState = document.getElementById("btn-clear-state");
       const btnOpenProjector = document.getElementById("btn-open-projector");
-      const btnLoadSongs = document.getElementById("btn-load-songs");
-      const sheetDropdown = document.getElementById("sheet-dropdown");
-      const sheetUrlInputGlobal = document.getElementById("sheet-url-input");
-      const sheetLoadStateDescription = document.getElementById(
-        "sheet-load-state-description"
-      );
       const statusText = document.getElementById("status-text");
       const manualSongTableBodies = {
         power: document.getElementById("manual-song-tbody-power"),
@@ -467,89 +303,22 @@
         emotional: document.getElementById("manual-search-emotional"),
         evergreen: document.getElementById("manual-search-evergreen"),
       };
-      const manualGlobalSearchInput = document.getElementById(
-        "manual-search-global"
-      );
       const btnManualSetBySlot = {
         power: document.getElementById("btn-manual-set-power"),
         emotional: document.getElementById("btn-manual-set-emotional"),
         evergreen: document.getElementById("btn-manual-set-evergreen"),
       };
-      const btnManualForceNext = document.getElementById(
-        "btn-manual-force-next"
-      );
       const manualSelectedSongId = {
         power: null,
         emotional: null,
         evergreen: null,
       };
-      let lastManualSelected = null;
 
       const slotEls = {
         power: document.getElementById("slot-power"),
         emotional: document.getElementById("slot-emotional"),
         evergreen: document.getElementById("slot-evergreen"),
       };
-
-      // Load playlist button visual state
-      const LOAD_STATE = {
-        NEUTRAL: "neutral",
-        SUCCESS: "success",
-        ERROR: "error",
-      };
-      let currentLoadState = LOAD_STATE.NEUTRAL;
-
-      function applyLoadButtonState() {
-        if (!btnLoadSongs) return;
-        btnLoadSongs.classList.remove(
-          "btn-load-neutral",
-          "btn-load-success",
-          "btn-load-error"
-        );
-        if (sheetLoadStateDescription) {
-          sheetLoadStateDescription.textContent = "No playlist loaded yet.";
-        }
-        switch (currentLoadState) {
-          case LOAD_STATE.SUCCESS:
-            btnLoadSongs.classList.add("btn-load-success");
-            if (sheetLoadStateDescription) {
-              sheetLoadStateDescription.textContent =
-                "Playlist successfully loaded.";
-            }
-            break;
-          case LOAD_STATE.ERROR:
-            btnLoadSongs.classList.add("btn-load-error");
-            if (sheetLoadStateDescription) {
-              sheetLoadStateDescription.textContent =
-                "Error loading playlist. Check URL or sheet publication.";
-            }
-            break;
-          case LOAD_STATE.NEUTRAL:
-          default:
-            btnLoadSongs.classList.add("btn-load-neutral");
-            break;
-        }
-      }
-
-      function setLoadButtonState(state) {
-        currentLoadState = state;
-        applyLoadButtonState();
-      }
-
-      function toggleSheetDropdown() {
-        if (!sheetDropdown) return false;
-        const isOpen = sheetDropdown.classList.contains("open");
-        if (!isOpen) {
-          sheetDropdown.classList.add("open");
-          if (sheetUrlInputGlobal) {
-            sheetUrlInputGlobal.focus();
-            sheetUrlInputGlobal.select();
-          }
-        } else {
-          sheetDropdown.classList.remove("open");
-        }
-        return !isOpen;
-      }
 
       // Keep a handle to the projector tab/window if we opened it,
       // so subsequent clicks can focus it instead of spawning many tabs.
@@ -622,7 +391,7 @@
           slot +
           " visible" +
           (nextSong && nextSong.id === song.id ? " locked" : "");
-        ticket.style.pointerEvents = "auto";
+        ticket.style.pointerEvents = "none";
 
         const keyLabel = slot === "power" ? "1" : slot === "emotional" ? "2" : "3";
 
@@ -648,11 +417,6 @@
           song.youtubeId +
           "</div>" +
           "</div>";
-
-        ticket.addEventListener("click", () => {
-          // Mirror the behaviour of pressing 1/2/3 to lock a choice.
-          handleChoiceKey(keyLabel);
-        });
 
         shell.appendChild(ticket);
       }
@@ -758,31 +522,15 @@
         if (btn) {
           btn.disabled = !id;
         }
-
-        // Track the last globally selected manual song so we can force it as next.
-        lastManualSelected = id ? { slot, id } : null;
-        if (btnManualForceNext) {
-          btnManualForceNext.disabled = !lastManualSelected;
-        }
       }
 
       function renderManualSongOptions(slotFilter) {
         if (!window.SONGS) return;
         const allSongs = Array.isArray(window.SONGS) ? window.SONGS : [];
 
-         // Reset global manual selection whenever we re-render the manual tables.
-        lastManualSelected = null;
-        if (btnManualForceNext) {
-          btnManualForceNext.disabled = true;
-        }
-
         const slotsToRender = slotFilter
           ? [slotFilter]
           : ["power", "emotional", "evergreen"];
-        const globalSearch =
-          manualGlobalSearchInput && manualGlobalSearchInput.value
-            ? manualGlobalSearchInput.value.toLowerCase()
-            : "";
 
         slotsToRender.forEach((slot) => {
           const body = manualSongTableBodies[slot];
@@ -792,19 +540,13 @@
           manualSelectedSongId[slot] = null;
 
           const input = manualSearchInputs[slot];
-          const slotSearch = input ? input.value.toLowerCase() : "";
+          const search = input ? input.value.toLowerCase() : "";
 
           const filtered = allSongs.filter((song) => {
             if (song.category !== slot) return false;
+            if (!search) return true;
             const haystack = (song.title + " " + song.artist).toLowerCase();
-
-            // If a global search term is present, use it for all categories.
-            if (globalSearch) {
-              return haystack.includes(globalSearch);
-            }
-
-            if (!slotSearch) return true;
-            return haystack.includes(slotSearch);
+            return haystack.includes(search);
           });
 
           filtered.forEach((song) => {
@@ -840,42 +582,6 @@
             btn.disabled = filtered.length === 0 || !manualSelectedSongId[slot];
           }
         });
-      }
-
-      function handleManualForceNext() {
-        if (!lastManualSelected || !window.SONGS) return;
-
-        const { slot, id } = lastManualSelected;
-        const allSongs = Array.isArray(window.SONGS) ? window.SONGS : [];
-        const song = allSongs.find((s) => s.id === id);
-        if (!song) return;
-
-        nextSong = song;
-        // Use the song's category as the effective slot so status text and
-        // projector behaviour stay consistent with normal choices.
-        nextSlot = song.category || slot || "power";
-
-        if (btnShow) {
-          btnShow.disabled = true;
-        }
-        btnStart.disabled = false;
-        if (btnClearSelection) {
-          btnClearSelection.disabled = false;
-        }
-
-        // Forcing a next song bypasses showing options to the audience.
-        setAudienceShowingOptions(false);
-        renderAllSlots();
-        updateStatus();
-
-        if (window.sendKaraokeMessage) {
-          window.sendKaraokeMessage("LOCK_CHOICE", {
-            slot: nextSlot,
-            song: nextSong,
-          });
-        }
-
-        saveAdminState();
       }
 
       function handleManualSet(slot) {
@@ -925,6 +631,11 @@
       function handleChoiceKey(key) {
         const slot = slotFromKey(key);
         if (!slot) return;
+        if (nextSong) {
+          // Already locked for this round, ignore further keys.
+          return;
+        }
+
         const song = currentSuggestions[slot];
         if (!song) return;
 
@@ -1195,14 +906,7 @@
       }
 
       function init() {
-        if (btnGenerate) {
-          // Disable until songs are loaded from Google Sheet or fallback
-          btnGenerate.disabled = true;
-          btnGenerate.addEventListener("click", handleGenerate);
-        }
-        // Default visual state of "Load playlist" button is neutral grey.
-        setLoadButtonState(LOAD_STATE.NEUTRAL);
-
+        btnGenerate.addEventListener("click", handleGenerate);
         btnShow.addEventListener("click", handleShowToAudience);
         btnStart.addEventListener("click", handleStartNextSong);
         if (btnClearSelection) {
@@ -1214,26 +918,6 @@
         if (btnOpenProjector) {
           btnOpenProjector.addEventListener("click", openOrFocusProjector);
         }
-        if (btnLoadSongs) {
-          btnLoadSongs.addEventListener("click", async () => {
-            // First click opens the dropdown and focuses the URL input.
-            const justOpened = toggleSheetDropdown();
-            if (justOpened) {
-              return;
-            }
-
-            // Second click (while open) actually performs the load.
-            if (btnGenerate) {
-              btnGenerate.disabled = true;
-            }
-            try {
-              await initApp();
-            } catch (e) {
-              // initApp already updates status text and button state; just log here.
-              console.error(e);
-            }
-          });
-        }
         window.addEventListener("keydown", handleAdminKeydown);
 
         Object.entries(manualSearchInputs).forEach(([slot, input]) => {
@@ -1243,11 +927,6 @@
             );
           }
         });
-        if (manualGlobalSearchInput) {
-          manualGlobalSearchInput.addEventListener("input", () =>
-            renderManualSongOptions()
-          );
-        }
         if (btnManualSetBySlot.power) {
           btnManualSetBySlot.power.addEventListener("click", () =>
             handleManualSet("power")
@@ -1264,19 +943,11 @@
           );
         }
 
-        if (btnManualForceNext) {
-          btnManualForceNext.disabled = true;
-          btnManualForceNext.addEventListener("click", handleManualForceNext);
-        }
-
         if (window.onKaraokeMessage) {
           window.onKaraokeMessage(handleBroadcast);
         }
 
-        // Load songs first (Google Sheet with local fallback), then restore state/UI
-        // Do not change the visual state of the "Load playlist" button for this
-        // automatic initial load – keep it neutral until the user interacts.
-        initApp({ updateLoadState: false });
+        restoreAdminStateOrDefaults();
       }
 
       window.addEventListener("DOMContentLoaded", init);
