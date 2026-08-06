@@ -1,14 +1,13 @@
 {
-  "name": "karakoke-engine",
+  "name": "karaoke-engine",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Two-window live karaoke controller: admin selector + YouTube projector, synced via BroadcastChannel.",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "serve ."
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "devDependencies": {
     "serve": "^14.2.5"
   }
