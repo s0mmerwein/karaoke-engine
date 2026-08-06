@@ -46,6 +46,13 @@ Songs live in `KaraokeApp/data.js` — plain objects with `id`, `artist`,
 `title`, `youtubeId`, and `category` by singing difficulty
 (`easy` | `middle` | `hard`, where `hard` displays as "Very Hard").
 
+Each song also has a `vibe`
+(`rock` | `party` | `groove` | `singalong` | `ballad` | `anthem`) that picks
+the subtle idle animation its projector ticket replays every ~30 seconds
+(randomized per card) while on screen; the chosen ticket gets its own
+celebration pulse. A missing or unknown vibe falls back to a per-category
+default, and all card motion respects `prefers-reduced-motion`.
+
 Before an event, validate that every video still exists and is embeddable:
 
 ```bash

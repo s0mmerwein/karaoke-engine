@@ -206,6 +206,185 @@ button {
   color: var(--color-hard);
 }
 
+/* Vibe animations.
+   Each song carries a `vibe` (data.js) mirrored onto the ticket as
+   data-vibe; projector.js adds .vibe-anim on a randomized ~30s pulse per
+   visible ticket, and .chosen-anim for the locked ticket instead. Movement
+   is animated on .ticket-inner so it never fights the ticket's own
+   show/lock transform transitions, glows reuse the pre-rendered ::after
+   layer, and everything stays compositor-friendly (transform, opacity). */
+@media (prefers-reduced-motion: no-preference) {
+  .ticket.vibe-anim[data-vibe="rock"] .ticket-inner {
+    animation: vibe-rock 950ms ease-in-out;
+  }
+
+  .ticket.vibe-anim[data-vibe="party"] .ticket-inner {
+    animation: vibe-party 1100ms ease-in-out;
+  }
+
+  .ticket.vibe-anim[data-vibe="groove"] .ticket-inner {
+    animation: vibe-groove 1700ms ease-in-out;
+  }
+
+  .ticket.vibe-anim[data-vibe="singalong"] .ticket-inner {
+    animation: vibe-singalong 2800ms ease-in-out;
+    transform-origin: 50% 100%;
+  }
+
+  .ticket.vibe-anim[data-vibe="ballad"] .ticket-inner {
+    animation: vibe-ballad 3400ms ease-in-out;
+  }
+
+  .ticket.vibe-anim[data-vibe="anthem"] .ticket-inner {
+    animation: vibe-anthem 3000ms ease-in-out;
+  }
+
+  .ticket.vibe-anim[data-vibe="anthem"]::after {
+    animation: vibe-anthem-glow 3000ms ease-in-out;
+  }
+
+  .ticket.chosen-anim .ticket-inner {
+    animation: chosen-pulse 1600ms ease-in-out;
+  }
+
+  .ticket.chosen-anim::after {
+    animation: chosen-glow 1600ms ease-in-out;
+  }
+}
+
+/* Quick head-bang: two small nods with a hint of tilt. */
+@keyframes vibe-rock {
+  0%,
+  100% {
+    transform: none;
+  }
+  15% {
+    transform: translateY(-3px) rotate(-1.2deg);
+  }
+  35% {
+    transform: translateY(1px) rotate(0.9deg);
+  }
+  55% {
+    transform: translateY(-2px) rotate(-0.7deg);
+  }
+  75% {
+    transform: translateY(0) rotate(0.4deg);
+  }
+}
+
+/* Bouncy double hop. */
+@keyframes vibe-party {
+  0%,
+  100% {
+    transform: none;
+  }
+  20% {
+    transform: translateY(-5px) scale(1.02);
+  }
+  45% {
+    transform: translateY(0) scale(1);
+  }
+  65% {
+    transform: translateY(-3px) scale(1.01);
+  }
+}
+
+/* Funky side-to-side shimmy. */
+@keyframes vibe-groove {
+  0%,
+  100% {
+    transform: none;
+  }
+  20% {
+    transform: translateX(-4px) rotate(-0.8deg);
+  }
+  50% {
+    transform: translateX(4px) rotate(0.8deg);
+  }
+  80% {
+    transform: translateX(-2px) rotate(-0.4deg);
+  }
+}
+
+/* Slow arm-in-arm crowd sway, hinged at the bottom edge. */
+@keyframes vibe-singalong {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-1.4deg);
+  }
+  70% {
+    transform: rotate(1.4deg);
+  }
+}
+
+/* Barely-there breath: gentle swell and lift. */
+@keyframes vibe-ballad {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateY(-2px) scale(1.015);
+  }
+}
+
+/* Dramatic slow swell; the matching glow rides on ::after. */
+@keyframes vibe-anthem {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes vibe-anthem-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Chosen ticket: a prouder double pulse with a glow flare. */
+@keyframes chosen-pulse {
+  0%,
+  100% {
+    transform: none;
+  }
+  20% {
+    transform: scale(1.04) rotate(-0.6deg);
+  }
+  45% {
+    transform: scale(1);
+  }
+  65% {
+    transform: scale(1.02) rotate(0.5deg);
+  }
+}
+
+@keyframes chosen-glow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.45;
+  }
+  55% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.7;
+  }
+}
+
 /* Projector idle screen */
 .idle-screen {
   position: fixed;

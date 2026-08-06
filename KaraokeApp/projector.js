@@ -116,6 +116,60 @@
 
   const SLOTS = ["easy", "middle", "hard"];
 
+  // Vibe pulses: each visible ticket replays its song's vibe animation
+  // (style.css) on its own randomized ~30s cadence so the cards never move
+  // in sync. A locked ticket plays the "chosen" animation instead.
+  const VIBES = ["rock", "party", "groove", "singalong", "ballad", "anthem"];
+  const VIBE_FALLBACK = { easy: "singalong", middle: "party", hard: "anthem" };
+  const VIBE_PULSE_MIN_MS = 24000;
+  const VIBE_PULSE_MAX_MS = 38000;
+  const VIBE_FIRST_MIN_MS = 8000;
+  const VIBE_FIRST_MAX_MS = 20000;
+  // Class removal happens on a timer (not animationend) so a pulse can never
+  // leave a stale class behind; must exceed the longest keyframe duration.
+  const VIBE_ANIM_MAX_MS = 3600;
+
+  const vibePulseTimers = {};
+  const vibeCleanupTimers = {};
+
+  function songVibe(song, slot) {
+    const vibe = song && song.vibe;
+    return VIBES.indexOf(vibe) !== -1 ? vibe : VIBE_FALLBACK[slot];
+  }
+
+  function randomBetween(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function stopVibePulses(slot) {
+    window.clearTimeout(vibePulseTimers[slot]);
+    window.clearTimeout(vibeCleanupTimers[slot]);
+    const el = ticketEls[slot];
+    if (el) el.classList.remove("vibe-anim", "chosen-anim");
+  }
+
+  function fireVibePulse(slot) {
+    const el = ticketEls[slot];
+    if (!el || !el.classList.contains("visible")) return;
+    el.classList.add(el.classList.contains("locked") ? "chosen-anim" : "vibe-anim");
+    window.clearTimeout(vibeCleanupTimers[slot]);
+    vibeCleanupTimers[slot] = window.setTimeout(() => {
+      el.classList.remove("vibe-anim", "chosen-anim");
+    }, VIBE_ANIM_MAX_MS);
+  }
+
+  function scheduleVibePulses(slot, firstDelayMs) {
+    window.clearTimeout(vibePulseTimers[slot]);
+    const delay =
+      firstDelayMs != null
+        ? firstDelayMs
+        : randomBetween(VIBE_PULSE_MIN_MS, VIBE_PULSE_MAX_MS);
+    vibePulseTimers[slot] = window.setTimeout(() => {
+      fireVibePulse(slot);
+      scheduleVibePulses(slot);
+    }, delay);
+  }
+
   function initTickets() {
     SLOTS.forEach((slot) => {
       const el = document.getElementById("ticket-" + slot);
@@ -126,9 +180,11 @@
 
   function hideAllTickets() {
     optionsVisible = false;
-    Object.values(ticketEls).forEach((el) => {
+    Object.entries(ticketEls).forEach(([slot, el]) => {
+      stopVibePulses(slot);
       el.classList.remove("visible", "locked");
       el.classList.add("hidden");
+      el.removeAttribute("data-vibe");
       const titleEl = el.querySelector(".ticket-title");
       const artistEl = el.querySelector(".ticket-artist");
       if (titleEl) titleEl.textContent = "–";
@@ -146,16 +202,23 @@
       if (!el) return;
 
       el.classList.remove("locked", "hidden");
+      stopVibePulses(slot);
       if (song) {
         const titleEl = el.querySelector(".ticket-title");
         const artistEl = el.querySelector(".ticket-artist");
         if (titleEl) titleEl.textContent = song.title || "";
         if (artistEl) artistEl.textContent = song.artist || "";
+        el.dataset.vibe = songVibe(song, slot);
         el.classList.add("visible");
         anyVisible = true;
+        scheduleVibePulses(
+          slot,
+          randomBetween(VIBE_FIRST_MIN_MS, VIBE_FIRST_MAX_MS)
+        );
       } else {
         el.classList.remove("visible");
         el.classList.add("hidden");
+        el.removeAttribute("data-vibe");
       }
     });
 
@@ -168,6 +231,7 @@
 
     optionsVisible = false;
     Object.entries(ticketEls).forEach(([key, el]) => {
+      stopVibePulses(key);
       if (key === slot) {
         el.classList.add("locked", "visible");
         el.classList.remove("hidden");
@@ -176,10 +240,15 @@
           const artistEl = el.querySelector(".ticket-artist");
           if (titleEl) titleEl.textContent = song.title || "";
           if (artistEl) artistEl.textContent = song.artist || "";
+          el.dataset.vibe = songVibe(song, key);
         }
+        // Celebrate the pick once the lock transition has settled, then keep
+        // the chosen animation on the usual randomized cadence.
+        scheduleVibePulses(key, 400);
       } else {
         el.classList.remove("locked", "visible");
         el.classList.add("hidden");
+        el.removeAttribute("data-vibe");
       }
     });
   }
