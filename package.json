@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Two-window live karaoke controller: admin selector + YouTube projector, synced via BroadcastChannel.",
   "scripts": {
-    "start": "serve ."
+    "start": "serve .",
+    "test": "node --test",
+    "check-songs": "node scripts/check-songs.mjs"
   },
   "keywords": [],
   "author": "",

@@ -4,6 +4,12 @@ Audit date: 2026-08-06 · Scope: full repository (`index.html`, `KaraokeApp/admi
 `KaraokeApp/projector.html`, `KaraokeApp/logic.js`, `KaraokeApp/data.js`,
 `KaraokeApp/style.css`, `package.json`, git history)
 
+> **Status:** implemented on this branch. All P0–P3 items below are done
+> (bug fixes, repo hygiene, playback controls/error handling, script
+> extraction, perf and UX work, tests, `npm run check-songs`), except the
+> catalogue swap to karaoke-version videos, which needs a human with YouTube
+> access — run `npm run check-songs` to find the IDs that need replacing.
+
 The app is a two-window live karaoke controller: an **admin page** (suggestion slots,
 manual song picker, buzzer keys 1/2/3) and a **projector page** (YouTube player +
 ticket overlay), synced via `BroadcastChannel` with state persisted in `localStorage`.
