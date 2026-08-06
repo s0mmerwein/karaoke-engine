@@ -206,6 +206,202 @@ button {
   color: var(--color-hard);
 }
 
+/* ------------------------------------------------------------------------
+   Vibe animations
+   Each song carries a `vibe` (data.js); projector.js mirrors it onto the
+   ticket as data-vibe. One barely-there motion loop per mood, ~30 s per
+   cycle, so the cards drift rather than dance. Motion lives on
+   .ticket-inner (the ticket element's own transform is reserved for the
+   show/hide/locked transitions), and the breathing glow on a pre-rendered
+   ::before layer whose opacity is animated — both compositor-friendly on
+   top of a playing video.
+   ------------------------------------------------------------------------ */
+.ticket::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 28px var(--vibe-glow, rgba(255, 255, 255, 0.25));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ticket-easy {
+  --vibe-glow: rgba(0, 255, 102, 0.45);
+}
+
+.ticket-middle {
+  --vibe-glow: rgba(255, 204, 0, 0.45);
+}
+
+.ticket-hard {
+  --vibe-glow: rgba(255, 0, 85, 0.45);
+}
+
+/* Per-vibe cycle length and glow strength; slightly different periods keep
+   the three cards from ever moving in lockstep. */
+.ticket[data-vibe="rock"] {
+  --vibe-duration: 28s;
+  --vibe-glow-max: 0.3;
+}
+
+.ticket[data-vibe="energy"] {
+  --vibe-duration: 26s;
+  --vibe-glow-max: 0.3;
+}
+
+.ticket[data-vibe="groove"] {
+  --vibe-duration: 30s;
+  --vibe-glow-max: 0.3;
+}
+
+.ticket[data-vibe="anthem"] {
+  --vibe-duration: 30s;
+  --vibe-glow-max: 0.25;
+}
+
+.ticket[data-vibe="ballad"] {
+  --vibe-duration: 32s;
+  --vibe-glow-max: 0.2;
+}
+
+.ticket[data-vibe="epic"] {
+  --vibe-duration: 34s;
+  --vibe-glow-max: 0.5;
+}
+
+.ticket.visible[data-vibe]::before {
+  animation: vibe-glow var(--vibe-duration, 30s) ease-in-out infinite;
+}
+
+.ticket.visible[data-vibe="rock"] .ticket-inner {
+  animation: vibe-rock var(--vibe-duration) ease-in-out infinite;
+}
+
+.ticket.visible[data-vibe="energy"] .ticket-inner {
+  animation: vibe-energy var(--vibe-duration) ease-in-out infinite;
+}
+
+.ticket.visible[data-vibe="groove"] .ticket-inner {
+  animation: vibe-groove var(--vibe-duration) ease-in-out infinite;
+}
+
+.ticket.visible[data-vibe="anthem"] .ticket-inner {
+  animation: vibe-anthem var(--vibe-duration) ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+.ticket.visible[data-vibe="ballad"] .ticket-inner {
+  animation: vibe-ballad var(--vibe-duration) ease-in-out infinite;
+}
+
+.ticket.visible[data-vibe="epic"] .ticket-inner {
+  animation: vibe-epic var(--vibe-duration) ease-in-out infinite;
+}
+
+@keyframes vibe-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: var(--vibe-glow-max, 0.3);
+  }
+}
+
+/* rock: a slow lean with a couple of off-beat nods */
+@keyframes vibe-rock {
+  0%,
+  100% {
+    transform: rotate(0deg) translateY(0);
+  }
+  20% {
+    transform: rotate(-0.5deg) translateY(-2px);
+  }
+  45% {
+    transform: rotate(0.3deg) translateY(0);
+  }
+  70% {
+    transform: rotate(-0.3deg) translateY(-1px);
+  }
+}
+
+/* energy: a few soft bounces spread across the loop */
+@keyframes vibe-energy {
+  0%,
+  30%,
+  60%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  15% {
+    transform: translateY(-3px) scale(1.008);
+  }
+  45% {
+    transform: translateY(-2px) scale(1.005);
+  }
+  80% {
+    transform: translateY(-3px) scale(1.008);
+  }
+}
+
+/* groove: side-to-side sway */
+@keyframes vibe-groove {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  25% {
+    transform: translateX(3px) rotate(0.4deg);
+  }
+  75% {
+    transform: translateX(-3px) rotate(-0.4deg);
+  }
+}
+
+/* anthem: lighters-in-the-air pendulum, hinged at the ticket's base */
+@keyframes vibe-anthem {
+  0%,
+  100% {
+    transform: rotate(-0.6deg);
+  }
+  50% {
+    transform: rotate(0.6deg);
+  }
+}
+
+/* ballad: slow breathing */
+@keyframes vibe-ballad {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.01);
+  }
+}
+
+/* epic: a long swell that peaks late, then settles */
+@keyframes vibe-epic {
+  0%,
+  100% {
+    transform: scale(1) translateY(0);
+  }
+  40% {
+    transform: scale(1.006) translateY(-1px);
+  }
+  70% {
+    transform: scale(1.018) translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket.visible[data-vibe] .ticket-inner,
+  .ticket.visible[data-vibe]::before {
+    animation: none;
+  }
+}
+
 /* Projector idle screen */
 .idle-screen {
   position: fixed;
@@ -441,8 +637,13 @@ button {
   transition: opacity 150ms ease-out;
 }
 
+.admin-root .ticket::before,
 .admin-root .ticket::after {
   display: none;
+}
+
+.admin-root .ticket .ticket-inner {
+  animation: none;
 }
 
 .admin-root .ticket.visible,

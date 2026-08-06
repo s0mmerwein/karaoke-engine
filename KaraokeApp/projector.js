@@ -129,11 +129,22 @@
     Object.values(ticketEls).forEach((el) => {
       el.classList.remove("visible", "locked");
       el.classList.add("hidden");
+      el.removeAttribute("data-vibe");
       const titleEl = el.querySelector(".ticket-title");
       const artistEl = el.querySelector(".ticket-artist");
       if (titleEl) titleEl.textContent = "–";
       if (artistEl) artistEl.textContent = "–";
     });
+  }
+
+  // The vibe attribute drives the song's slow mood animation (style.css).
+  // Songs without a vibe simply get a static card.
+  function setTicketVibe(el, song) {
+    if (song && song.vibe) {
+      el.setAttribute("data-vibe", song.vibe);
+    } else {
+      el.removeAttribute("data-vibe");
+    }
   }
 
   function showOptions(payload) {
@@ -151,11 +162,13 @@
         const artistEl = el.querySelector(".ticket-artist");
         if (titleEl) titleEl.textContent = song.title || "";
         if (artistEl) artistEl.textContent = song.artist || "";
+        setTicketVibe(el, song);
         el.classList.add("visible");
         anyVisible = true;
       } else {
         el.classList.remove("visible");
         el.classList.add("hidden");
+        el.removeAttribute("data-vibe");
       }
     });
 
@@ -176,6 +189,7 @@
           const artistEl = el.querySelector(".ticket-artist");
           if (titleEl) titleEl.textContent = song.title || "";
           if (artistEl) artistEl.textContent = song.artist || "";
+          setTicketVibe(el, song);
         }
       } else {
         el.classList.remove("locked", "visible");

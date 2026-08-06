@@ -43,8 +43,14 @@ options are visible to the audience).
 ## Song catalogue
 
 Songs live in `KaraokeApp/data.js` — plain objects with `id`, `artist`,
-`title`, `youtubeId`, and `category` by singing difficulty
-(`easy` | `middle` | `hard`, where `hard` displays as "Very Hard").
+`title`, `youtubeId`, `category` by singing difficulty
+(`easy` | `middle` | `hard`, where `hard` displays as "Very Hard"), and
+`vibe` — the song's mood
+(`rock` | `energy` | `groove` | `anthem` | `ballad` | `epic`), which drives
+a very subtle ~30-second animation loop on the projector's option cards:
+rock tracks lean and nod, anthems sway like lighters in the air, ballads
+breathe slowly, epics swell, and so on. The animations respect
+`prefers-reduced-motion`.
 
 Before an event, validate that every video still exists and is embeddable:
 
