@@ -4,6 +4,19 @@
 (function () {
   const CHANNEL_NAME = "karaoke_flow";
 
+  // Shared message protocol. Both pages must use these constants instead of
+  // string literals so admin and projector cannot drift apart.
+  const KARAOKE_ACTIONS = {
+    SHOW_OPTIONS: "SHOW_OPTIONS",
+    HIDE_OPTIONS: "HIDE_OPTIONS",
+    LOCK_CHOICE: "LOCK_CHOICE",
+    PLAY_SONG: "PLAY_SONG",
+    AUDIENCE_KEY: "AUDIENCE_KEY",
+    PLAYER_CONTROL: "PLAYER_CONTROL",
+    PLAYER_STATE: "PLAYER_STATE",
+    PLAYER_ERROR: "PLAYER_ERROR",
+  };
+
   const DEBUG_KARAOKE = false;
 
   let channel = null;
@@ -65,6 +78,7 @@
     sendMessage,
     onMessage: onKaraokeMessage,
   };
+  window.KARAOKE_ACTIONS = KARAOKE_ACTIONS;
   window.sendKaraokeMessage = sendMessage;
   window.onKaraokeMessage = onKaraokeMessage;
 })();

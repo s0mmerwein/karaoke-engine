@@ -46,4 +46,9 @@ if (typeof window !== "undefined") {
   window.SONGS = SONGS;
 }
 
+// Node export for tooling (scripts/check-songs.mjs) and tests.
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { SONGS };
+}
+
 

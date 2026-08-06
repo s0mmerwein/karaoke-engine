@@ -21,23 +21,34 @@
           Open projector window
         </button>
         <div class="kbd-hint">
-          Buzzer:
-          <span class="kbd">1</span> Power,
-          <span class="kbd">2</span> Emotional,
-          <span class="kbd">3</span> Evergreen
+          <span class="kbd">1</span><span class="kbd">2</span
+          ><span class="kbd">3</span> lock slot ·
+          <span class="kbd">,</span> generate ·
+          <span class="kbd">+</span> show/hide ·
+          <span class="kbd">Enter</span> start ·
+          <span class="kbd">-</span> reset
         </div>
       </header>
+
+      <div id="error-banner" class="admin-error-banner" role="alert" hidden>
+        <span id="error-banner-text"></span>
+        <button id="btn-dismiss-error" class="btn btn-small btn-ghost">
+          Dismiss
+        </button>
+      </div>
 
       <main class="admin-columns">
         <section class="admin-column" id="slot-power">
           <div class="admin-column-header">
             <div class="admin-column-title">Slot 1</div>
-            <div class="admin-column-badge power">Power</div>
+            <div class="admin-column-meta">
+              <span class="admin-column-count" id="count-power"></span>
+              <div class="admin-column-badge power">Power</div>
+            </div>
           </div>
           <div class="admin-ticket-shell">
             <div class="admin-ticket-empty">
-              No suggestion yet. Use
-              <span class="text-power">Generate Suggestions</span>.
+              No suggestion yet. Use Generate Suggestions.
             </div>
           </div>
         </section>
@@ -45,12 +56,14 @@
         <section class="admin-column" id="slot-emotional">
           <div class="admin-column-header">
             <div class="admin-column-title">Slot 2</div>
-            <div class="admin-column-badge emotional">Emotional</div>
+            <div class="admin-column-meta">
+              <span class="admin-column-count" id="count-emotional"></span>
+              <div class="admin-column-badge emotional">Emotional</div>
+            </div>
           </div>
           <div class="admin-ticket-shell">
             <div class="admin-ticket-empty">
-              No suggestion yet. Use
-              <span class="text-power">Generate Suggestions</span>.
+              No suggestion yet. Use Generate Suggestions.
             </div>
           </div>
         </section>
@@ -58,12 +71,14 @@
         <section class="admin-column" id="slot-evergreen">
           <div class="admin-column-header">
             <div class="admin-column-title">Slot 3</div>
-            <div class="admin-column-badge evergreen">Evergreen</div>
+            <div class="admin-column-meta">
+              <span class="admin-column-count" id="count-evergreen"></span>
+              <div class="admin-column-badge evergreen">Evergreen</div>
+            </div>
           </div>
           <div class="admin-ticket-shell">
             <div class="admin-ticket-empty">
-              No suggestion yet. Use
-              <span class="text-power">Generate Suggestions</span>.
+              No suggestion yet. Use Generate Suggestions.
             </div>
           </div>
         </section>
@@ -85,16 +100,38 @@
           <button id="btn-start" class="btn btn-danger" disabled>
             Start Next Song
           </button>
-          <div class="admin-status" id="status-text">
+          <div class="admin-status" id="status-text" role="status" aria-live="polite">
             No selection made yet.
           </div>
-          <button
-            id="btn-clear-state"
-            type="button"
-            class="btn btn-secondary btn-small"
-          >
-            Clear stored state
-          </button>
+        </div>
+      </section>
+
+      <section class="admin-playback">
+        <div class="admin-playback-label">Playback</div>
+        <button id="btn-pause-resume" class="btn btn-secondary" disabled>
+          Pause
+        </button>
+        <button id="btn-replay" class="btn btn-secondary" disabled>
+          Replay
+        </button>
+        <button id="btn-stop" class="btn btn-danger" disabled>Stop</button>
+        <label class="admin-volume">
+          Volume
+          <input
+            type="range"
+            id="volume-slider"
+            min="0"
+            max="100"
+            value="100"
+          />
+        </label>
+        <div
+          class="admin-playback-state"
+          id="playback-state"
+          role="status"
+          aria-live="polite"
+        >
+          No song started yet.
         </div>
       </section>
 
@@ -193,766 +230,32 @@
           </div>
         </div>
         <div class="admin-manual-hint">
-          Choose a song from the database and set it as a suggestion for the
-          matching slot. The audience can then vote as usual with
-          <span class="text-power">1</span>,
+          Click a song to select it (double-click to set it directly), then use
+          the button to place it in the matching slot. The audience can then
+          vote as usual with <span class="text-power">1</span>,
           <span class="text-emotional">2</span> or
           <span class="text-evergreen">3</span>.
         </div>
       </section>
+
+      <section class="admin-history">
+        <div class="admin-history-header">
+          <span>Session history</span>
+          <button id="btn-clear-state" type="button" class="btn btn-ghost btn-small">
+            Clear stored state
+          </button>
+        </div>
+        <ol id="history-list" class="admin-history-list"></ol>
+        <div id="history-empty" class="admin-history-empty">
+          No songs played yet in this session.
+        </div>
+      </section>
     </div>
 
-    <!-- Data and shared logic -->
+    <!-- Data and shared logic, then the page controller -->
     <script src="data.js"></script>
+    <script src="core.js"></script>
     <script src="logic.js"></script>
-
-    <script>
-      // Local state
-      const playedSongIds = new Set();
-      const currentSuggestions = {
-        power: null,
-        emotional: null,
-        evergreen: null,
-      };
-      let nextSong = null;
-      let nextSlot = null;
-      let isAudienceShowingOptions = false;
-
-      // Persistence helpers
-      const ADMIN_STORAGE_KEY = "karaoke_admin_state_v1";
-
-      function getSongById(id) {
-        if (id == null || !Array.isArray(window.SONGS)) return null;
-        return window.SONGS.find((s) => s.id === id) || null;
-      }
-
-      function saveAdminState() {
-        try {
-          const state = {
-            playedSongIds: Array.from(playedSongIds),
-            suggestions: {
-              power: currentSuggestions.power ? currentSuggestions.power.id : null,
-              emotional: currentSuggestions.emotional
-                ? currentSuggestions.emotional.id
-                : null,
-              evergreen: currentSuggestions.evergreen
-                ? currentSuggestions.evergreen.id
-                : null,
-            },
-            nextSongId: nextSong ? nextSong.id : null,
-            nextSlot: nextSlot || null,
-            isAudienceShowingOptions: !!isAudienceShowingOptions,
-          };
-          window.localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(state));
-        } catch (err) {
-          console.warn("[KARAOKE] Failed to save admin state", err);
-        }
-      }
-
-      function clearStoredAdminState() {
-        const confirmed = window.confirm(
-          "Clear all saved karaoke state (played songs, suggestions, selection)? This cannot be undone."
-        );
-        if (!confirmed) return;
-
-        try {
-          window.localStorage.removeItem(ADMIN_STORAGE_KEY);
-        } catch (err) {
-          console.warn("[KARAOKE] Failed to clear stored admin state", err);
-        }
-
-        // Reset in-memory state
-        playedSongIds.clear();
-        currentSuggestions.power = null;
-        currentSuggestions.emotional = null;
-        currentSuggestions.evergreen = null;
-        nextSong = null;
-        nextSlot = null;
-        isAudienceShowingOptions = false;
-
-        // Reset UI
-        renderAllSlots();
-        renderManualSongOptions();
-        if (btnShow) btnShow.disabled = true;
-        btnStart.disabled = true;
-        if (btnClearSelection) btnClearSelection.disabled = true;
-        setAudienceShowingOptions(false);
-        updateStatus();
-
-        // Ensure projector view does not show stale options
-        if (window.sendKaraokeMessage) {
-          window.sendKaraokeMessage("HIDE_OPTIONS", {});
-        }
-      }
-
-      // DOM references
-      const btnGenerate = document.getElementById("btn-generate");
-      const btnShow = document.getElementById("btn-show");
-      const btnStart = document.getElementById("btn-start");
-      const btnClearSelection = document.getElementById("btn-clear-selection");
-      const btnClearState = document.getElementById("btn-clear-state");
-      const btnOpenProjector = document.getElementById("btn-open-projector");
-      const statusText = document.getElementById("status-text");
-      const manualSongTableBodies = {
-        power: document.getElementById("manual-song-tbody-power"),
-        emotional: document.getElementById("manual-song-tbody-emotional"),
-        evergreen: document.getElementById("manual-song-tbody-evergreen"),
-      };
-      const manualSearchInputs = {
-        power: document.getElementById("manual-search-power"),
-        emotional: document.getElementById("manual-search-emotional"),
-        evergreen: document.getElementById("manual-search-evergreen"),
-      };
-      const btnManualSetBySlot = {
-        power: document.getElementById("btn-manual-set-power"),
-        emotional: document.getElementById("btn-manual-set-emotional"),
-        evergreen: document.getElementById("btn-manual-set-evergreen"),
-      };
-      const manualSelectedSongId = {
-        power: null,
-        emotional: null,
-        evergreen: null,
-      };
-
-      const slotEls = {
-        power: document.getElementById("slot-power"),
-        emotional: document.getElementById("slot-emotional"),
-        evergreen: document.getElementById("slot-evergreen"),
-      };
-
-      // Keep a handle to the projector tab/window if we opened it,
-      // so subsequent clicks can focus it instead of spawning many tabs.
-      let projectorWindow = null;
-
-      function openOrFocusProjector() {
-        const url = "projector.html";
-        try {
-          if (projectorWindow && !projectorWindow.closed) {
-            projectorWindow.focus();
-            return;
-          }
-        } catch (e) {
-          // If the handle is no longer usable, fall through and reopen.
-        }
-        projectorWindow = window.open(url, "_blank", "noopener");
-      }
-
-      function setAudienceShowingOptions(isShowing) {
-        isAudienceShowingOptions = !!isShowing;
-        const body = document.body;
-        if (!body) return;
-        if (isAudienceShowingOptions) {
-          body.classList.add("audience-showing-options");
-        } else {
-          body.classList.remove("audience-showing-options");
-        }
-        updateStatus();
-      }
-
-      function randomChoice(arr) {
-        if (!arr.length) return null;
-        const idx = Math.floor(Math.random() * arr.length);
-        return arr[idx];
-      }
-
-      function pickSongForCategory(category) {
-        if (!Array.isArray(window.SONGS)) return null;
-        const allInCat = window.SONGS.filter(
-          (s) => s.category === category
-        );
-        if (!allInCat.length) return null;
-
-        // Only ever auto-pick songs that have not been played yet.
-        const unplayed = allInCat.filter((s) => !playedSongIds.has(s.id));
-        if (!unplayed.length) return null;
-        return randomChoice(unplayed);
-      }
-
-      function renderSlot(slot, song) {
-        const slotEl = slotEls[slot];
-        if (!slotEl) return;
-        const shell = slotEl.querySelector(".admin-ticket-shell");
-        if (!shell) return;
-
-        shell.innerHTML = "";
-
-        if (!song) {
-          const empty = document.createElement("div");
-          empty.className = "admin-ticket-empty";
-          empty.textContent =
-            "No suggestion yet. Use Generate Suggestions.";
-          shell.appendChild(empty);
-          return;
-        }
-
-        const ticket = document.createElement("div");
-        ticket.className =
-          "ticket ticket-" +
-          slot +
-          " visible" +
-          (nextSong && nextSong.id === song.id ? " locked" : "");
-        ticket.style.pointerEvents = "none";
-
-        const keyLabel = slot === "power" ? "1" : slot === "emotional" ? "2" : "3";
-
-        ticket.innerHTML =
-          '<div class="ticket-inner">' +
-          '<div class="ticket-key">' +
-          keyLabel +
-          "</div>" +
-          '<div class="ticket-label">' +
-          (slot === "power"
-            ? "Power"
-            : slot === "emotional"
-            ? "Emotional"
-            : "Evergreen") +
-          "</div>" +
-          '<div class="ticket-title">' +
-          song.title +
-          "</div>" +
-          '<div class="ticket-artist">' +
-          song.artist +
-          "</div>" +
-          '<div class="ticket-shortcode">YouTube ID: ' +
-          song.youtubeId +
-          "</div>" +
-          "</div>";
-
-        shell.appendChild(ticket);
-      }
-
-      function renderAllSlots() {
-        ["power", "emotional", "evergreen"].forEach((slot) => {
-          renderSlot(slot, currentSuggestions[slot]);
-        });
-      }
-
-      function updateStatus() {
-        if (!nextSong) {
-          let html =
-            'No selection made yet. Use <span class="text-power">1</span>, <span class="text-emotional">2</span> or <span class="text-evergreen">3</span>.';
-          if (isAudienceShowingOptions) {
-            html +=
-              ' – <span class="text-emotional">shown to audience</span>';
-          }
-          statusText.innerHTML = html;
-          return;
-        }
-        let html =
-          'Next: <span class="admin-status-strong">' +
-          nextSong.title +
-          "</span> – " +
-          nextSong.artist +
-          " (" +
-          (nextSlot === "power"
-            ? "Power"
-            : nextSlot === "emotional"
-            ? "Emotional"
-            : "Evergreen") +
-          ")";
-        if (isAudienceShowingOptions) {
-          html += ' – <span class="text-emotional">shown to audience</span>';
-        }
-        statusText.innerHTML = html;
-      }
-
-      function handleGenerate() {
-        currentSuggestions.power = pickSongForCategory("power");
-        currentSuggestions.emotional = pickSongForCategory("emotional");
-        currentSuggestions.evergreen = pickSongForCategory("evergreen");
-
-        renderAllSlots();
-
-        btnShow.disabled =
-          !currentSuggestions.power &&
-          !currentSuggestions.emotional &&
-          !currentSuggestions.evergreen;
-
-        // Reset locked state
-        nextSong = null;
-        nextSlot = null;
-        btnStart.disabled = true;
-        if (btnClearSelection) btnClearSelection.disabled = true;
-        setAudienceShowingOptions(false);
-        saveAdminState();
-      }
-
-      function handleShowToAudience() {
-        if (!window.sendKaraokeMessage) return;
-
-        // Toggle behavior: if already showing, hide again; otherwise show.
-        if (isAudienceShowingOptions) {
-          window.sendKaraokeMessage("HIDE_OPTIONS", {});
-          setAudienceShowingOptions(false);
-          saveAdminState();
-          return;
-        }
-
-        window.sendKaraokeMessage("SHOW_OPTIONS", {
-          power: currentSuggestions.power,
-          emotional: currentSuggestions.emotional,
-          evergreen: currentSuggestions.evergreen,
-        });
-        setAudienceShowingOptions(
-          !!(
-            currentSuggestions.power ||
-            currentSuggestions.emotional ||
-            currentSuggestions.evergreen
-          )
-        );
-        saveAdminState();
-      }
-
-      function setManualSelectedRow(slot, id) {
-        manualSelectedSongId[slot] = id;
-        const body = manualSongTableBodies[slot];
-        if (!body) return;
-
-        const rows = Array.from(body.querySelectorAll("tr"));
-        rows.forEach((row) => {
-          const rowId = parseInt(row.dataset.songId || "0", 10);
-          if (rowId === id) {
-            row.classList.add("selected");
-          } else {
-            row.classList.remove("selected");
-          }
-        });
-
-        const btn = btnManualSetBySlot[slot];
-        if (btn) {
-          btn.disabled = !id;
-        }
-      }
-
-      function renderManualSongOptions(slotFilter) {
-        if (!window.SONGS) return;
-        const allSongs = Array.isArray(window.SONGS) ? window.SONGS : [];
-
-        const slotsToRender = slotFilter
-          ? [slotFilter]
-          : ["power", "emotional", "evergreen"];
-
-        slotsToRender.forEach((slot) => {
-          const body = manualSongTableBodies[slot];
-          if (!body) return;
-
-          body.innerHTML = "";
-          manualSelectedSongId[slot] = null;
-
-          const input = manualSearchInputs[slot];
-          const search = input ? input.value.toLowerCase() : "";
-
-          const filtered = allSongs.filter((song) => {
-            if (song.category !== slot) return false;
-            if (!search) return true;
-            const haystack = (song.title + " " + song.artist).toLowerCase();
-            return haystack.includes(search);
-          });
-
-          filtered.forEach((song) => {
-            const row = document.createElement("tr");
-            row.dataset.songId = String(song.id);
-            const isPlayed = playedSongIds.has(song.id);
-            if (isPlayed) {
-              row.classList.add("played");
-              row.title = "Already played in this session";
-            }
-
-            const titleCell = document.createElement("td");
-            titleCell.className = "col-title";
-            titleCell.textContent = song.title;
-
-            const artistCell = document.createElement("td");
-            artistCell.className = "col-artist";
-            artistCell.textContent = song.artist;
-
-            row.appendChild(titleCell);
-            row.appendChild(artistCell);
-
-            row.addEventListener("click", () => {
-              setManualSelectedRow(slot, song.id);
-            });
-
-            body.appendChild(row);
-          });
-
-          const btn = btnManualSetBySlot[slot];
-          if (btn) {
-            // Disable if there are no songs or no row has been selected yet.
-            btn.disabled = filtered.length === 0 || !manualSelectedSongId[slot];
-          }
-        });
-      }
-
-      function handleManualSet(slot) {
-        if (!window.SONGS || !manualSelectedSongId[slot]) return;
-        const id = manualSelectedSongId[slot];
-
-        const allSongs = Array.isArray(window.SONGS) ? window.SONGS : [];
-        const song = allSongs.find((s) => s.id === id);
-        if (!song) return;
-
-        const effectiveSlot = slot || song.category || "power";
-        currentSuggestions[effectiveSlot] = song;
-
-        renderAllSlots();
-
-        btnShow.disabled =
-          !currentSuggestions.power &&
-          !currentSuggestions.emotional &&
-          !currentSuggestions.evergreen;
-
-        // Reset any previously locked choice since suggestions changed.
-        nextSong = null;
-        nextSlot = null;
-        btnStart.disabled = true;
-        if (btnClearSelection) btnClearSelection.disabled = true;
-        updateStatus();
-
-        // If the audience view is currently showing options, update them.
-        if (isAudienceShowingOptions && window.sendKaraokeMessage) {
-          window.sendKaraokeMessage("SHOW_OPTIONS", {
-            power: currentSuggestions.power,
-            emotional: currentSuggestions.emotional,
-            evergreen: currentSuggestions.evergreen,
-          });
-        }
-
-        saveAdminState();
-      }
-
-      function slotFromKey(key) {
-        if (key === "1") return "power";
-        if (key === "2") return "emotional";
-        if (key === "3") return "evergreen";
-        return null;
-      }
-
-      function handleChoiceKey(key) {
-        const slot = slotFromKey(key);
-        if (!slot) return;
-        if (nextSong) {
-          // Already locked for this round, ignore further keys.
-          return;
-        }
-
-        const song = currentSuggestions[slot];
-        if (!song) return;
-
-        nextSong = song;
-        nextSlot = slot;
-        if (btnShow) {
-          btnShow.disabled = true;
-        }
-        btnStart.disabled = false;
-        if (btnClearSelection) btnClearSelection.disabled = false;
-        // Once a choice is locked, we are no longer "showing options" to the audience.
-        // Turn off the audience-options state so status text and highlight are correct.
-        setAudienceShowingOptions(false);
-        renderAllSlots();
-
-        if (window.sendKaraokeMessage) {
-          window.sendKaraokeMessage("LOCK_CHOICE", {
-            slot,
-            song,
-          });
-        }
-
-        saveAdminState();
-      }
-
-      function handleClearSelection() {
-        if (!nextSong) return;
-
-        nextSong = null;
-        nextSlot = null;
-        if (btnShow) {
-          btnShow.disabled =
-            !currentSuggestions.power &&
-            !currentSuggestions.emotional &&
-            !currentSuggestions.evergreen;
-        }
-        btnStart.disabled = true;
-        if (btnClearSelection) btnClearSelection.disabled = true;
-        renderAllSlots();
-
-        // Do not change what the audience currently sees; clearing is an admin-only action.
-        // If you want to re-show options to the audience, use "Show to Audience" instead.
-
-        saveAdminState();
-      }
-
-      function handleStartNextSong() {
-        if (!nextSong || !window.sendKaraokeMessage) return;
-        window.sendKaraokeMessage("PLAY_SONG", {
-          youtubeId: nextSong.youtubeId,
-          song: nextSong,
-        });
-
-        playedSongIds.add(nextSong.id);
-
-        // Mark as consumed, but keep status until next suggestion round
-        btnStart.disabled = true;
-        if (btnClearSelection) btnClearSelection.disabled = true;
-        setAudienceShowingOptions(false);
-
-        // Refresh manual selection tables so played songs are visibly greyed out.
-        renderManualSongOptions();
-
-        saveAdminState();
-      }
-
-      function handleAdminKeydown(ev) {
-        const key = ev.key;
-
-        // Ignore shortcuts while typing in inputs / textareas / contentEditable
-        const target = ev.target;
-        const tagName = target && target.tagName ? target.tagName.toLowerCase() : "";
-        const isTypingTarget =
-          tagName === "input" ||
-          tagName === "textarea" ||
-          (target && target.isContentEditable);
-        if (isTypingTarget) {
-          return;
-        }
-
-        if (key === "1" || key === "2" || key === "3") {
-          handleChoiceKey(key);
-          return;
-        }
-
-        // Keyboard shortcuts for admin controls
-        if (key === "Enter") {
-          if (btnStart && !btnStart.disabled) {
-            ev.preventDefault();
-            handleStartNextSong();
-          }
-          return;
-        }
-
-        if (key === "+") {
-          if (btnShow && !btnShow.disabled) {
-            ev.preventDefault();
-            handleShowToAudience();
-          }
-          return;
-        }
-
-        if (key === "-") {
-          if (btnClearSelection && !btnClearSelection.disabled) {
-            ev.preventDefault();
-            handleClearSelection();
-          }
-          return;
-        }
-
-        if (key === ",") {
-          if (btnGenerate && !btnGenerate.disabled) {
-            ev.preventDefault();
-            handleGenerate();
-          }
-          return;
-        }
-      }
-
-      function handleBroadcast(msg) {
-        if (!msg || !msg.action) return;
-        if (msg.action === "AUDIENCE_KEY") {
-          const key = msg.payload && msg.payload.key;
-          if (key) {
-            handleChoiceKey(key);
-          }
-        }
-      }
-
-      function restoreAdminStateOrDefaults() {
-        try {
-          const raw = window.localStorage.getItem(ADMIN_STORAGE_KEY);
-          if (!raw) {
-            // No stored state – just initialise defaults.
-            renderManualSongOptions();
-            setAudienceShowingOptions(false);
-            updateStatus();
-            return;
-          }
-
-          // Helper to apply the stored state once songs are available
-          const applyRestoredState = () => {
-            try {
-              const latestRaw = window.localStorage.getItem(ADMIN_STORAGE_KEY);
-              if (!latestRaw) {
-                // State was cleared after initial load – respect that and keep defaults.
-                renderManualSongOptions();
-                setAudienceShowingOptions(false);
-                updateStatus();
-                return;
-              }
-
-              const state = JSON.parse(latestRaw);
-
-              // Restore played songs
-              playedSongIds.clear();
-              if (Array.isArray(state.playedSongIds)) {
-                state.playedSongIds.forEach((id) => {
-                  if (typeof id === "number") {
-                    playedSongIds.add(id);
-                  }
-                });
-              }
-
-              // Restore suggestions
-              const suggestions = state.suggestions || {};
-              currentSuggestions.power = getSongById(suggestions.power);
-              currentSuggestions.emotional = getSongById(suggestions.emotional);
-              currentSuggestions.evergreen = getSongById(suggestions.evergreen);
-
-              // Restore locked choice; ensure invariants stay consistent
-              nextSong = getSongById(state.nextSongId);
-              nextSlot = nextSong ? state.nextSlot || null : null;
-
-              // Re-render UI based on restored data
-              renderAllSlots();
-              renderManualSongOptions();
-
-              // Restore button states
-              const hasLockedChoice = !!nextSong && !!nextSlot;
-              btnShow.disabled =
-                hasLockedChoice ||
-                (!currentSuggestions.power &&
-                  !currentSuggestions.emotional &&
-                  !currentSuggestions.evergreen);
-
-              btnStart.disabled = !hasLockedChoice;
-              if (btnClearSelection) {
-                btnClearSelection.disabled = !hasLockedChoice;
-              }
-
-              // Determine if we currently have at least one valid suggestion
-              const hasAnySuggestions =
-                !!currentSuggestions.power ||
-                !!currentSuggestions.emotional ||
-                !!currentSuggestions.evergreen;
-
-              // Restore "options shown" state & status text, but only if suggestions exist
-              const restoredIsAudienceShowing =
-                !!state.isAudienceShowingOptions && hasAnySuggestions;
-              setAudienceShowingOptions(restoredIsAudienceShowing);
-
-              // Optionally sync the projector with the restored state.
-              if (window.sendKaraokeMessage) {
-                if (restoredIsAudienceShowing) {
-                  window.sendKaraokeMessage("SHOW_OPTIONS", {
-                    power: currentSuggestions.power,
-                    emotional: currentSuggestions.emotional,
-                    evergreen: currentSuggestions.evergreen,
-                  });
-                } else if (hasLockedChoice) {
-                  window.sendKaraokeMessage("LOCK_CHOICE", {
-                    slot: nextSlot,
-                    song: nextSong,
-                  });
-                } else if (
-                  state.isAudienceShowingOptions &&
-                  !restoredIsAudienceShowing
-                ) {
-                  // Previously showing options, but cannot restore suggestions now –
-                  // explicitly hide to prevent stale options on the projector.
-                  window.sendKaraokeMessage("HIDE_OPTIONS", {});
-                }
-              }
-            } catch (err) {
-              console.warn("[KARAOKE] Failed to apply restored admin state", err);
-              renderManualSongOptions();
-              setAudienceShowingOptions(false);
-              updateStatus();
-            }
-          };
-
-          // If songs are not yet available, defer restoration until they are,
-          // but stop after a reasonable number of attempts to avoid leaking timers.
-          if (!Array.isArray(window.SONGS)) {
-            let attempts = 0;
-            const maxAttempts = 50; // ~5 seconds with 100ms delay
-            const delayMs = 100;
-
-            const waitForSongsAndApply = () => {
-              if (Array.isArray(window.SONGS)) {
-                applyRestoredState();
-                return;
-              }
-              attempts += 1;
-              if (attempts >= maxAttempts) {
-                console.warn(
-                  "[KARAOKE] SONGS not available after waiting; keeping current admin state"
-                );
-                // Do not schedule further retries; leave UI in its current (empty) state.
-                return;
-              }
-              window.setTimeout(waitForSongsAndApply, delayMs);
-            };
-
-            waitForSongsAndApply();
-            return;
-          }
-
-          // Songs are already available – apply immediately.
-          applyRestoredState();
-        } catch (err) {
-          console.warn("[KARAOKE] Failed to restore admin state", err);
-          renderManualSongOptions();
-          setAudienceShowingOptions(false);
-          updateStatus();
-        }
-      }
-
-      function init() {
-        btnGenerate.addEventListener("click", handleGenerate);
-        btnShow.addEventListener("click", handleShowToAudience);
-        btnStart.addEventListener("click", handleStartNextSong);
-        if (btnClearSelection) {
-          btnClearSelection.addEventListener("click", handleClearSelection);
-        }
-        if (btnClearState) {
-          btnClearState.addEventListener("click", clearStoredAdminState);
-        }
-        if (btnOpenProjector) {
-          btnOpenProjector.addEventListener("click", openOrFocusProjector);
-        }
-        window.addEventListener("keydown", handleAdminKeydown);
-
-        Object.entries(manualSearchInputs).forEach(([slot, input]) => {
-          if (input) {
-            input.addEventListener("input", () =>
-              renderManualSongOptions(slot)
-            );
-          }
-        });
-        if (btnManualSetBySlot.power) {
-          btnManualSetBySlot.power.addEventListener("click", () =>
-            handleManualSet("power")
-          );
-        }
-        if (btnManualSetBySlot.emotional) {
-          btnManualSetBySlot.emotional.addEventListener("click", () =>
-            handleManualSet("emotional")
-          );
-        }
-        if (btnManualSetBySlot.evergreen) {
-          btnManualSetBySlot.evergreen.addEventListener("click", () =>
-            handleManualSet("evergreen")
-          );
-        }
-
-        if (window.onKaraokeMessage) {
-          window.onKaraokeMessage(handleBroadcast);
-        }
-
-        restoreAdminStateOrDefaults();
-      }
-
-      window.addEventListener("DOMContentLoaded", init);
-    </script>
+    <script src="admin.js"></script>
   </body>
 </html>
-
-

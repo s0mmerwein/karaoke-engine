@@ -73,24 +73,36 @@ button {
   align-items: flex-end;
 }
 
-/* Ticket styling (used in both projector and admin) */
+/* Ticket styling (used in both projector and admin).
+   The tickets render on top of a playing video, so only compositor-friendly
+   properties (opacity, transform) are animated; the locked glow lives on a
+   pre-rendered ::after layer whose opacity is faded in. */
 .ticket {
+  position: relative;
   min-width: 220px;
   max-width: 320px;
   padding: 16px 20px;
   border-radius: 16px;
-  background: rgba(10, 10, 18, 0.9);
+  background: rgba(10, 10, 18, 0.95);
   border: 2px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px);
   box-shadow: 0 0 24px rgba(0, 0, 0, 0.8);
   pointer-events: none;
   opacity: 0;
   transform: translateY(30px) scale(0.96);
   transition:
     opacity 200ms ease-out,
-    transform 220ms ease-out,
-    box-shadow 200ms ease-out,
-    border-color 200ms ease-out;
+    transform 220ms ease-out;
+}
+
+.ticket::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  box-shadow: 0 0 32px rgba(255, 255, 255, 0.35);
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+  pointer-events: none;
 }
 
 .ticket.visible {
@@ -99,9 +111,12 @@ button {
 }
 
 .ticket.locked {
-  box-shadow: 0 0 32px rgba(255, 255, 255, 0.35);
   transform: translateY(-4px) scale(1.03);
-  border-width: 3px;
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.ticket.locked::after {
+  opacity: 1;
 }
 
 .ticket.hidden {
@@ -194,18 +209,6 @@ button {
   gap: 16px;
 }
 
-.admin-header-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.admin-header-buttons {
-  display: flex;
-  gap: 8px;
-}
-
 .admin-header h1 {
   font-size: 1.5rem;
   margin: 0;
@@ -214,16 +217,6 @@ button {
 .admin-subtitle {
   font-size: 0.9rem;
   color: var(--color-muted);
-}
-
-.btn-header {
-  background: #2a2a3a;
-  border-color: rgba(255, 255, 255, 0.3);
-  color: var(--color-muted);
-}
-
-.btn-header:hover:not(:disabled) {
-  background: #333347;
 }
 
 .admin-columns {
@@ -247,6 +240,21 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
+}
+
+.admin-column-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.admin-column-count {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.admin-column-count.depleted {
+  color: var(--color-power);
 }
 
 .admin-column-title {
@@ -338,10 +346,6 @@ body.audience-showing-options .admin-status {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-}
-
-.admin-global-search-input {
-  min-width: 220px;
 }
 
 .admin-manual-row {
@@ -447,10 +451,9 @@ body.audience-showing-options .admin-status {
   width: 30%;
 }
 
-.admin-manual-table .col-category {
-  width: 20%;
-  text-transform: capitalize;
-  color: var(--color-muted);
+.admin-manual-table tbody tr:focus-visible {
+  outline: 2px solid var(--color-emotional);
+  outline-offset: -2px;
 }
 
 .admin-manual-search input {
@@ -537,66 +540,15 @@ body.audience-showing-options .admin-status {
   border-color: rgba(255, 255, 255, 0.4);
 }
 
-/* Load playlist button states */
-.btn-load-neutral {
-  background: linear-gradient(135deg, #4b4f5b, #353844);
-  border-color: rgba(255, 255, 255, 0.3);
+.btn-ghost {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.2);
   color: var(--color-muted);
 }
 
-.btn-load-success {
-  background: linear-gradient(135deg, #e6fff0, #c7ffdd);
-  border-color: rgba(144, 255, 196, 0.9);
-  color: #07301a;
-}
-
-.btn-load-error {
-  background: linear-gradient(135deg, #ffe6e6, #ffc4c4);
-  border-color: rgba(255, 180, 180, 0.9);
-  color: #3f0606;
-}
-
-.sheet-dropdown {
-  position: relative;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.sheet-dropdown-panel {
-  position: absolute;
-  top: 115%;
-  right: 0;
-  min-width: 260px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
-  display: none;
-  z-index: 20;
-}
-
-.sheet-dropdown.open .sheet-dropdown-panel {
-  display: block;
-}
-
-.sheet-dropdown-label {
-  font-size: 0.75rem;
-  color: var(--color-muted);
-  margin-bottom: 4px;
-}
-
-.sheet-dropdown-hint {
-  font-size: 0.75rem;
-  color: var(--color-muted);
-  margin-top: 4px;
-}
-
-.sheet-dropdown-state {
-  margin-top: 6px;
-  font-size: 0.78rem;
-  color: var(--color-muted);
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
 }
 
 .kbd-hint {
@@ -611,6 +563,216 @@ body.audience-showing-options .admin-status {
   border: 1px solid rgba(255, 255, 255, 0.25);
   background: rgba(0, 0, 0, 0.6);
   font-size: 0.7rem;
+}
+
+/* Error banner */
+.admin-error-banner[hidden] {
+  display: none;
+}
+
+.admin-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(255, 0, 85, 0.12);
+  border: 1px solid rgba(255, 0, 85, 0.6);
+  color: #ffd9e5;
+  font-size: 0.9rem;
+}
+
+/* Playback transport bar */
+.admin-playback {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: var(--color-surface);
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.admin-playback-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-muted);
+  margin-right: 4px;
+}
+
+.admin-volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.admin-volume input[type="range"] {
+  width: 140px;
+  accent-color: var(--color-emotional);
+}
+
+.admin-playback-state {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  margin-left: auto;
+}
+
+/* Session history */
+.admin-history {
+  background: var(--color-surface);
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.admin-history-list {
+  margin: 0;
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.admin-history-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-history-empty {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+/* Projector idle screen */
+.idle-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, #151522 0, #050509 60%, #000 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 400ms ease-out;
+}
+
+.idle-screen.visible {
+  opacity: 1;
+}
+
+.idle-inner {
+  text-align: center;
+}
+
+.idle-title {
+  font-size: 4.5rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: linear-gradient(
+    135deg,
+    var(--color-power),
+    var(--color-emotional),
+    var(--color-evergreen)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.idle-subtitle {
+  margin-top: 12px;
+  font-size: 1.2rem;
+  color: var(--color-muted);
+}
+
+/* Projector now-playing lower third */
+.now-playing {
+  position: fixed;
+  left: 32px;
+  bottom: 32px;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: rgba(10, 10, 18, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 300ms ease-out,
+    transform 300ms ease-out;
+}
+
+.now-playing.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.now-playing-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.now-playing-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+/* Focus visibility for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--color-emotional);
+  outline-offset: 2px;
+}
+
+/* Narrow screens: stack the layout instead of crushing the columns */
+@media (max-width: 900px) {
+  .admin-header {
+    flex-wrap: wrap;
+  }
+
+  .admin-columns {
+    flex-direction: column;
+  }
+
+  .admin-controls {
+    flex-wrap: wrap;
+  }
+
+  .admin-controls-left,
+  .admin-controls-right {
+    flex-wrap: wrap;
+  }
+
+  .admin-playback-state {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 /* Small helpers */
