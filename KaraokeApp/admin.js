@@ -158,6 +158,23 @@
 
   // Rendering
 
+  // Decorative rekordbox-style waveform strip; deterministic per song so the
+  // same track always draws the same shape.
+  function buildWaveform(song) {
+    const wave = document.createElement("div");
+    wave.className = "ticket-wave";
+    for (let i = 0; i < 48; i++) {
+      const bar = document.createElement("span");
+      const height =
+        18 +
+        Math.abs(Math.sin(i * 0.83 + song.id * 1.7)) * 52 +
+        Math.abs(Math.sin(i * 2.71 + song.id)) * 30;
+      bar.style.height = height.toFixed(0) + "%";
+      wave.appendChild(bar);
+    }
+    return wave;
+  }
+
   function renderSlot(slot) {
     const song = currentSuggestions[slot];
     const slotEl = slotEls[slot];
@@ -207,6 +224,7 @@
     inner.appendChild(label);
     inner.appendChild(title);
     inner.appendChild(artist);
+    inner.appendChild(buildWaveform(song));
     ticket.appendChild(inner);
     shell.appendChild(ticket);
   }
