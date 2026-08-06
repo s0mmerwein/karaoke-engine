@@ -13,7 +13,7 @@
           <h1>Karaoke <span class="brand-accent">Flow</span></h1>
           <div class="admin-subtitle">
             Open this page in the laptop browser. Then open
-            <span class="text-emotional">projector.html</span> in a second
+            <span class="text-middle">projector.html</span> in a second
             window for the projector – or use the button.
           </div>
         </div>
@@ -22,7 +22,7 @@
         </button>
         <div class="kbd-hint">
           <span class="kbd">1</span><span class="kbd">2</span
-          ><span class="kbd">3</span> lock slot ·
+          ><span class="kbd">3</span> lock deck ·
           <span class="kbd">,</span> generate ·
           <span class="kbd">+</span> show/hide ·
           <span class="kbd">Enter</span> start ·
@@ -38,12 +38,12 @@
       </div>
 
       <main class="admin-columns">
-        <section class="admin-column" id="slot-power">
+        <section class="admin-column" id="slot-easy">
           <div class="admin-column-header">
             <div class="admin-column-title">Deck 1</div>
             <div class="admin-column-meta">
-              <span class="admin-column-count" id="count-power"></span>
-              <div class="admin-column-badge power">Power</div>
+              <span class="admin-column-count" id="count-easy"></span>
+              <div class="admin-column-badge easy">Easy</div>
             </div>
           </div>
           <div class="admin-ticket-shell">
@@ -53,12 +53,12 @@
           </div>
         </section>
 
-        <section class="admin-column" id="slot-emotional">
+        <section class="admin-column" id="slot-middle">
           <div class="admin-column-header">
             <div class="admin-column-title">Deck 2</div>
             <div class="admin-column-meta">
-              <span class="admin-column-count" id="count-emotional"></span>
-              <div class="admin-column-badge emotional">Emotional</div>
+              <span class="admin-column-count" id="count-middle"></span>
+              <div class="admin-column-badge middle">Middle</div>
             </div>
           </div>
           <div class="admin-ticket-shell">
@@ -68,12 +68,12 @@
           </div>
         </section>
 
-        <section class="admin-column" id="slot-evergreen">
+        <section class="admin-column" id="slot-hard">
           <div class="admin-column-header">
             <div class="admin-column-title">Deck 3</div>
             <div class="admin-column-meta">
-              <span class="admin-column-count" id="count-evergreen"></span>
-              <div class="admin-column-badge evergreen">Evergreen</div>
+              <span class="admin-column-count" id="count-hard"></span>
+              <div class="admin-column-badge hard">Very Hard</div>
             </div>
           </div>
           <div class="admin-ticket-shell">
@@ -141,12 +141,12 @@
         </div>
         <div class="admin-manual-row admin-manual-row-bottom">
           <div class="admin-manual-col">
-            <div class="admin-manual-col-header text-power">Power</div>
+            <div class="admin-manual-col-header text-easy">Easy</div>
             <label class="admin-manual-field admin-manual-search">
               Search
               <input
                 type="text"
-                id="manual-search-power"
+                id="manual-search-easy"
                 placeholder="Search by title or artist…"
               />
             </label>
@@ -158,24 +158,24 @@
                     <th>Artist</th>
                   </tr>
                 </thead>
-                <tbody id="manual-song-tbody-power"></tbody>
+                <tbody id="manual-song-tbody-easy"></tbody>
               </table>
             </div>
             <button
-              id="btn-manual-set-power"
+              id="btn-manual-set-easy"
               class="btn btn-secondary btn-small"
             >
-              Set to slot 1
+              Load to deck 1
             </button>
           </div>
 
           <div class="admin-manual-col">
-            <div class="admin-manual-col-header text-emotional">Emotional</div>
+            <div class="admin-manual-col-header text-middle">Middle</div>
             <label class="admin-manual-field admin-manual-search">
               Search
               <input
                 type="text"
-                id="manual-search-emotional"
+                id="manual-search-middle"
                 placeholder="Search by title or artist…"
               />
             </label>
@@ -187,26 +187,24 @@
                     <th>Artist</th>
                   </tr>
                 </thead>
-                <tbody id="manual-song-tbody-emotional"></tbody>
+                <tbody id="manual-song-tbody-middle"></tbody>
               </table>
             </div>
             <button
-              id="btn-manual-set-emotional"
+              id="btn-manual-set-middle"
               class="btn btn-secondary btn-small"
             >
-              Set to slot 2
+              Load to deck 2
             </button>
           </div>
 
           <div class="admin-manual-col">
-            <div class="admin-manual-col-header text-evergreen">
-              Evergreen
-            </div>
+            <div class="admin-manual-col-header text-hard">Very Hard</div>
             <label class="admin-manual-field admin-manual-search">
               Search
               <input
                 type="text"
-                id="manual-search-evergreen"
+                id="manual-search-hard"
                 placeholder="Search by title or artist…"
               />
             </label>
@@ -218,23 +216,23 @@
                     <th>Artist</th>
                   </tr>
                 </thead>
-                <tbody id="manual-song-tbody-evergreen"></tbody>
+                <tbody id="manual-song-tbody-hard"></tbody>
               </table>
             </div>
             <button
-              id="btn-manual-set-evergreen"
+              id="btn-manual-set-hard"
               class="btn btn-secondary btn-small"
             >
-              Set to slot 3
+              Load to deck 3
             </button>
           </div>
         </div>
         <div class="admin-manual-hint">
-          Click a song to select it (double-click to set it directly), then use
-          the button to place it in the matching slot. The audience can then
-          vote as usual with <span class="text-power">1</span>,
-          <span class="text-emotional">2</span> or
-          <span class="text-evergreen">3</span>.
+          Click a song to select it (double-click to load it directly), then
+          use the button to place it in the matching deck. The audience can
+          then vote as usual with <span class="text-easy">1</span>,
+          <span class="text-middle">2</span> or
+          <span class="text-hard">3</span>.
         </div>
       </section>
 

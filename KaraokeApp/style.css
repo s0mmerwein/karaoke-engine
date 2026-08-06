@@ -40,9 +40,10 @@ button {
   --color-text: #f5f5f5;
   --color-muted: #9a9ab5;
 
-  --color-power: #ff0055;
-  --color-emotional: #00ccff;
-  --color-evergreen: #00ff66;
+  /* Difficulty categories: traffic-light scheme */
+  --color-easy: #00ff66;
+  --color-middle: #ffcc00;
+  --color-hard: #ff0055;
 
   /* rekordbox-style admin skin */
   --rb-bg: #0e1012;
@@ -178,31 +179,31 @@ button {
   position: relative;
 }
 
-.ticket-power {
-  border-color: rgba(255, 0, 85, 0.7);
-  box-shadow: 0 0 18px rgba(255, 0, 85, 0.4);
-}
-
-.ticket-emotional {
-  border-color: rgba(0, 204, 255, 0.7);
-  box-shadow: 0 0 18px rgba(0, 204, 255, 0.4);
-}
-
-.ticket-evergreen {
+.ticket-easy {
   border-color: rgba(0, 255, 102, 0.7);
   box-shadow: 0 0 18px rgba(0, 255, 102, 0.4);
 }
 
-.ticket-power .ticket-label {
-  color: var(--color-power);
+.ticket-middle {
+  border-color: rgba(255, 204, 0, 0.7);
+  box-shadow: 0 0 18px rgba(255, 204, 0, 0.4);
 }
 
-.ticket-emotional .ticket-label {
-  color: var(--color-emotional);
+.ticket-hard {
+  border-color: rgba(255, 0, 85, 0.7);
+  box-shadow: 0 0 18px rgba(255, 0, 85, 0.4);
 }
 
-.ticket-evergreen .ticket-label {
-  color: var(--color-evergreen);
+.ticket-easy .ticket-label {
+  color: var(--color-easy);
+}
+
+.ticket-middle .ticket-label {
+  color: var(--color-middle);
+}
+
+.ticket-hard .ticket-label {
+  color: var(--color-hard);
 }
 
 /* Projector idle screen */
@@ -233,9 +234,9 @@ button {
   letter-spacing: 0.06em;
   background: linear-gradient(
     135deg,
-    var(--color-power),
-    var(--color-emotional),
-    var(--color-evergreen)
+    var(--color-easy),
+    var(--color-middle),
+    var(--color-hard)
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -383,7 +384,7 @@ button {
 }
 
 .admin-column-count.depleted {
-  color: var(--color-power);
+  color: var(--color-hard);
 }
 
 .admin-column-badge {
@@ -396,19 +397,19 @@ button {
   border: 1px solid transparent;
 }
 
-.admin-column-badge.power {
-  color: var(--color-power);
-  border-color: var(--color-power);
+.admin-column-badge.easy {
+  color: var(--color-easy);
+  border-color: var(--color-easy);
 }
 
-.admin-column-badge.emotional {
-  color: var(--color-emotional);
-  border-color: var(--color-emotional);
+.admin-column-badge.middle {
+  color: var(--color-middle);
+  border-color: var(--color-middle);
 }
 
-.admin-column-badge.evergreen {
-  color: var(--color-evergreen);
-  border-color: var(--color-evergreen);
+.admin-column-badge.hard {
+  color: var(--color-hard);
+  border-color: var(--color-hard);
 }
 
 .admin-ticket-shell {
@@ -455,21 +456,21 @@ button {
   background: #12181b;
 }
 
-.admin-root .ticket-power {
-  border-left-color: var(--color-power);
+.admin-root .ticket-easy {
+  border-left-color: var(--color-easy);
 }
 
-.admin-root .ticket-emotional {
-  border-left-color: var(--color-emotional);
+.admin-root .ticket-middle {
+  border-left-color: var(--color-middle);
 }
 
-.admin-root .ticket-evergreen {
-  border-left-color: var(--color-evergreen);
+.admin-root .ticket-hard {
+  border-left-color: var(--color-hard);
 }
 
-.admin-root .ticket.locked.ticket-power,
-.admin-root .ticket.locked.ticket-emotional,
-.admin-root .ticket.locked.ticket-evergreen {
+.admin-root .ticket.locked.ticket-easy,
+.admin-root .ticket.locked.ticket-middle,
+.admin-root .ticket.locked.ticket-hard {
   border-left-color: var(--rb-cyan);
 }
 
@@ -525,16 +526,16 @@ button {
   background: currentColor;
 }
 
-.ticket-power .ticket-wave {
-  color: var(--color-power);
+.ticket-easy .ticket-wave {
+  color: var(--color-easy);
 }
 
-.ticket-emotional .ticket-wave {
-  color: var(--color-emotional);
+.ticket-middle .ticket-wave {
+  color: var(--color-middle);
 }
 
-.ticket-evergreen .ticket-wave {
-  color: var(--color-evergreen);
+.ticket-hard .ticket-wave {
+  color: var(--color-hard);
 }
 
 .admin-root .ticket.locked .ticket-wave {
@@ -579,6 +580,10 @@ body.audience-showing-options .admin-status {
 .admin-status-strong {
   color: #ffffff;
   font-weight: 600;
+}
+
+.admin-status-onair {
+  color: var(--rb-cyan);
 }
 
 /* Playback transport bar */
@@ -1037,16 +1042,16 @@ body.audience-showing-options .admin-status {
 }
 
 /* Small helpers */
-.text-power {
-  color: var(--color-power);
+.text-easy {
+  color: var(--color-easy);
 }
 
-.text-emotional {
-  color: var(--color-emotional);
+.text-middle {
+  color: var(--color-middle);
 }
 
-.text-evergreen {
-  color: var(--color-evergreen);
+.text-hard {
+  color: var(--color-hard);
 }
 
 .text-muted {

@@ -27,7 +27,7 @@
 
   // Local state
   const playedSongIds = new Set();
-  const currentSuggestions = { power: null, emotional: null, evergreen: null };
+  const currentSuggestions = { easy: null, middle: null, hard: null };
   let nextSong = null;
   let nextSlot = null;
   let hasStarted = false;
@@ -91,6 +91,15 @@
 
   function hasAnySuggestions() {
     return SLOTS.some((slot) => !!currentSuggestions[slot]);
+  }
+
+  // Payload for SHOW_OPTIONS broadcasts: one song (or null) per slot key.
+  function optionsPayload() {
+    const payload = {};
+    SLOTS.forEach((slot) => {
+      payload[slot] = currentSuggestions[slot];
+    });
+    return payload;
   }
 
   // Persistence
@@ -279,11 +288,16 @@
       statusText.appendChild(
         document.createTextNode("No selection made yet. Use ")
       );
-      statusText.appendChild(span("text-power", "1"));
-      statusText.appendChild(document.createTextNode(", "));
-      statusText.appendChild(span("text-emotional", "2"));
-      statusText.appendChild(document.createTextNode(" or "));
-      statusText.appendChild(span("text-evergreen", "3"));
+      CATEGORIES.forEach((category, i) => {
+        if (i > 0) {
+          statusText.appendChild(
+            document.createTextNode(i === CATEGORIES.length - 1 ? " or " : ", ")
+          );
+        }
+        statusText.appendChild(
+          span("text-" + category.key, category.hotkey)
+        );
+      });
       statusText.appendChild(document.createTextNode("."));
     } else {
       const category = categoryBySlot[nextSlot];
@@ -302,7 +316,7 @@
 
     if (isAudienceShowingOptions) {
       statusText.appendChild(document.createTextNode(" – "));
-      statusText.appendChild(span("text-emotional", "shown to audience"));
+      statusText.appendChild(span("admin-status-onair", "shown to audience"));
     }
   }
 
@@ -434,11 +448,7 @@
       return;
     }
 
-    window.sendKaraokeMessage(ACTIONS.SHOW_OPTIONS, {
-      power: currentSuggestions.power,
-      emotional: currentSuggestions.emotional,
-      evergreen: currentSuggestions.evergreen,
-    });
+    window.sendKaraokeMessage(ACTIONS.SHOW_OPTIONS, optionsPayload());
     setAudienceShowingOptions(hasAnySuggestions());
     saveAdminState();
   }
@@ -636,11 +646,7 @@
 
     // If the audience view is currently showing options, update them.
     if (isAudienceShowingOptions) {
-      window.sendKaraokeMessage(ACTIONS.SHOW_OPTIONS, {
-        power: currentSuggestions.power,
-        emotional: currentSuggestions.emotional,
-        evergreen: currentSuggestions.evergreen,
-      });
+      window.sendKaraokeMessage(ACTIONS.SHOW_OPTIONS, optionsPayload());
     }
 
     saveAdminState();
@@ -758,11 +764,7 @@
       // deliberately NOT re-broadcast: the song may still be playing and a
       // LOCK_CHOICE would draw the ticket overlay over the video.
       if (restoredIsAudienceShowing) {
-        window.sendKaraokeMessage(ACTIONS.SHOW_OPTIONS, {
-          power: currentSuggestions.power,
-          emotional: currentSuggestions.emotional,
-          evergreen: currentSuggestions.evergreen,
-        });
+        window.sendKaraokeMessage(ACTIONS.SHOW_OPTIONS, optionsPayload());
       } else if (nextSong && nextSlot && !hasStarted) {
         window.sendKaraokeMessage(ACTIONS.LOCK_CHOICE, {
           slot: nextSlot,

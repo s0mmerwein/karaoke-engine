@@ -3,10 +3,10 @@
 A two-window live karaoke controller for hosted karaoke nights:
 
 - **Admin view** (`KaraokeApp/admin.html`) — runs on the host's laptop.
-  Generates three song suggestions (Power / Emotional / Evergreen), shows them
-  to the audience, locks the crowd's choice, and starts playback. Includes a
-  manual song picker, playback transport (pause/stop/replay/volume), and a
-  session history.
+  Generates three song suggestions by difficulty (Easy / Middle / Very Hard),
+  shows them to the audience, locks the crowd's choice, and starts playback.
+  Includes a manual song picker, playback transport
+  (pause/stop/replay/volume), and a session history.
 - **Projector view** (`KaraokeApp/projector.html`) — runs full-screen on the
   projector/TV. Plays the YouTube video and renders the ticket overlay, idle
   screen, and now-playing banner.
@@ -31,7 +31,7 @@ to the projector display and make it full-screen.
 
 | Key | Action |
 |---|---|
-| `1` / `2` / `3` | Lock the Power / Emotional / Evergreen suggestion (the "buzzer") |
+| `1` / `2` / `3` | Lock the Easy / Middle / Very Hard suggestion (the "buzzer") |
 | `,` | Generate suggestions |
 | `+` | Show/hide options on the projector |
 | `Enter` | Start the locked song |
@@ -43,7 +43,8 @@ options are visible to the audience).
 ## Song catalogue
 
 Songs live in `KaraokeApp/data.js` — plain objects with `id`, `artist`,
-`title`, `youtubeId`, and `category` (`power` | `emotional` | `evergreen`).
+`title`, `youtubeId`, and `category` by singing difficulty
+(`easy` | `middle` | `hard`, where `hard` displays as "Very Hard").
 
 Before an event, validate that every video still exists and is embeddable:
 

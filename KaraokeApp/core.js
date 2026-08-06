@@ -12,9 +12,9 @@
   }
 })(typeof window !== "undefined" ? window : null, function () {
   const CATEGORIES = [
-    { key: "power", label: "Power", hotkey: "1" },
-    { key: "emotional", label: "Emotional", hotkey: "2" },
-    { key: "evergreen", label: "Evergreen", hotkey: "3" },
+    { key: "easy", label: "Easy", hotkey: "1" },
+    { key: "middle", label: "Middle", hotkey: "2" },
+    { key: "hard", label: "Very Hard", hotkey: "3" },
   ];
   const CATEGORY_KEYS = CATEGORIES.map((c) => c.key);
   const STATE_VERSION = 2;

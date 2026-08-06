@@ -114,8 +114,10 @@
 
   // Ticket overlay
 
+  const SLOTS = ["easy", "middle", "hard"];
+
   function initTickets() {
-    ["power", "emotional", "evergreen"].forEach((slot) => {
+    SLOTS.forEach((slot) => {
       const el = document.getElementById("ticket-" + slot);
       if (el) ticketEls[slot] = el;
     });
@@ -135,11 +137,11 @@
   }
 
   function showOptions(payload) {
-    const { power, emotional, evergreen } = payload || {};
-    const bySlot = { power, emotional, evergreen };
+    const bySlot = payload || {};
     let anyVisible = false;
 
-    Object.entries(bySlot).forEach(([slot, song]) => {
+    SLOTS.forEach((slot) => {
+      const song = bySlot[slot];
       const el = ticketEls[slot];
       if (!el) return;
 
