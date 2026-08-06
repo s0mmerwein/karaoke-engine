@@ -75,6 +75,7 @@ button {
 
 /* Ticket styling (used in both projector and admin) */
 .ticket {
+  position: relative;
   min-width: 220px;
   max-width: 320px;
   padding: 16px 20px;
@@ -175,6 +176,112 @@ button {
 
 .ticket-evergreen .ticket-label {
   color: var(--color-evergreen);
+}
+
+/* Song-vibe ambient animations.
+   Each category runs a slow (~30 s) loop while its ticket is visible:
+   power = ember surges, emotional = breathing swell, evergreen = gentle sway.
+   The glow lives on ::before so it never fights the .locked box-shadow, and
+   the micro-motion lives on .ticket-inner so it never fights the show/hide
+   transforms on .ticket itself. */
+.ticket::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.ticket-power::before {
+  box-shadow: 0 0 30px 3px rgba(255, 0, 85, 0.45);
+}
+
+.ticket-emotional::before {
+  box-shadow: 0 0 30px 3px rgba(0, 204, 255, 0.4);
+}
+
+.ticket-evergreen::before {
+  box-shadow: 0 0 30px 3px rgba(0, 255, 102, 0.35);
+}
+
+.ticket-power.visible::before {
+  animation: vibe-power-glow 28s ease-in-out infinite;
+}
+
+.ticket-power.visible .ticket-inner {
+  animation: vibe-power-inner 28s ease-in-out infinite;
+}
+
+.ticket-emotional.visible::before {
+  animation: vibe-emotional-glow 32s ease-in-out infinite;
+}
+
+.ticket-emotional.visible .ticket-inner {
+  animation: vibe-emotional-inner 32s ease-in-out infinite;
+}
+
+.ticket-evergreen.visible::before {
+  animation: vibe-evergreen-glow 30s ease-in-out infinite;
+}
+
+.ticket-evergreen.visible .ticket-inner {
+  animation: vibe-evergreen-inner 30s ease-in-out infinite;
+}
+
+/* Power: ember surges — the glow swells like stadium lights hitting a chorus */
+@keyframes vibe-power-glow {
+  0%, 100% { opacity: 0.2; }
+  12% { opacity: 0.5; }
+  24% { opacity: 0.25; }
+  48% { opacity: 0.75; }
+  62% { opacity: 0.3; }
+  80% { opacity: 0.5; }
+}
+
+@keyframes vibe-power-inner {
+  0%, 100% { transform: translateY(0) scale(1); }
+  12% { transform: translateY(-1px) scale(1.005); }
+  24% { transform: translateY(0) scale(1); }
+  48% { transform: translateY(-2px) scale(1.01); }
+  62% { transform: translateY(0) scale(1); }
+  80% { transform: translateY(-1px) scale(1.005); }
+}
+
+/* Emotional: a slow breathing swell, drifting like a ballad */
+@keyframes vibe-emotional-glow {
+  0%, 100% { opacity: 0.2; }
+  30% { opacity: 0.55; }
+  55% { opacity: 0.3; }
+  78% { opacity: 0.5; }
+}
+
+@keyframes vibe-emotional-inner {
+  0%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-2px); }
+  55% { transform: translateY(0.5px); }
+  78% { transform: translateY(-1.5px); }
+}
+
+/* Evergreen: a barely-there sway, like the room singing along */
+@keyframes vibe-evergreen-glow {
+  0%, 100% { opacity: 0.25; }
+  35% { opacity: 0.45; }
+  70% { opacity: 0.3; }
+}
+
+@keyframes vibe-evergreen-inner {
+  0%, 100% { transform: rotate(0deg) translateX(0); }
+  25% { transform: rotate(0.25deg) translateX(1px); }
+  50% { transform: rotate(0deg) translateX(0); }
+  75% { transform: rotate(-0.25deg) translateX(-1px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket::before,
+  .ticket .ticket-inner {
+    animation: none !important;
+  }
 }
 
 /* Admin dashboard layout */
