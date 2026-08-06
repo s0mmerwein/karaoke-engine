@@ -52,6 +52,8 @@
 
     <!-- Shared BroadcastChannel helpers -->
     <script src="logic.js"></script>
+    <!-- Vibe catalogue + offline fallback classifier -->
+    <script src="vibes.js"></script>
 
     <!-- YouTube IFrame API -->
     <script src="https://www.youtube.com/iframe_api"></script>
@@ -96,6 +98,98 @@
       // Ticket / overlay helpers
       const ticketEls = {};
 
+      // --- Vibe animation engine -------------------------------------
+      // Each visible ticket plays a subtle animation matching its song's
+      // vibe roughly every 30 seconds, randomized per card so they never
+      // fire in sync. The chosen (locked) card additionally gets a pop +
+      // continuous breathing glow (pure CSS on .locked / .locked-pop).
+      const vibeTimers = {};
+      const vibeClearTimers = {};
+      const currentSlotSongs = {};
+      let vibesById = {};
+
+      const ALL_VIBE_CLASSES = window.KaraokeVibes
+        ? Object.keys(window.KaraokeVibes.VIBES).map((v) => "vibe-" + v)
+        : [];
+
+      function resolveVibe(song) {
+        if (!song) return null;
+        // Freshest first: the admin broadcasts AI results after load, so
+        // the map wins over whatever vibe the payload carried at the time.
+        if (song.id != null && vibesById[song.id]) return vibesById[song.id];
+        if (song.vibe) return song.vibe;
+        return window.KaraokeVibes
+          ? window.KaraokeVibes.heuristicVibe(song)
+          : null;
+      }
+
+      function clearVibeAnimation(el) {
+        if (!el) return;
+        window.clearTimeout(vibeClearTimers[el.id]);
+        el.classList.remove("vibe-anim");
+        ALL_VIBE_CLASSES.forEach((cls) => el.classList.remove(cls));
+      }
+
+      function playVibeAnimation(slot) {
+        const el = ticketEls[slot];
+        if (!el || !el.classList.contains("visible")) return;
+        const vibe = el.dataset.vibe;
+        if (!vibe) return;
+
+        clearVibeAnimation(el);
+        const def = window.KaraokeVibes && window.KaraokeVibes.VIBES[vibe];
+        const duration = (def && def.duration) || 3500;
+        el.style.setProperty("--vibe-duration", duration + "ms");
+        el.classList.add("vibe-anim", "vibe-" + vibe);
+        vibeClearTimers[el.id] = window.setTimeout(() => {
+          el.classList.remove("vibe-anim", "vibe-" + vibe);
+        }, duration + 100);
+      }
+
+      function scheduleVibeAnimation(slot, isFirst) {
+        window.clearTimeout(vibeTimers[slot]);
+        const delay = isFirst
+          ? 6000 + Math.random() * 14000
+          : 22000 + Math.random() * 16000;
+        vibeTimers[slot] = window.setTimeout(() => {
+          playVibeAnimation(slot);
+          scheduleVibeAnimation(slot, false);
+        }, delay);
+      }
+
+      function stopVibeAnimation(slot) {
+        window.clearTimeout(vibeTimers[slot]);
+        delete vibeTimers[slot];
+        clearVibeAnimation(ticketEls[slot]);
+      }
+
+      function setSlotSong(slot, song) {
+        const el = ticketEls[slot];
+        if (!el) return;
+        if (song) {
+          currentSlotSongs[slot] = song;
+          const vibe = resolveVibe(song);
+          if (vibe) {
+            el.dataset.vibe = vibe;
+          } else {
+            delete el.dataset.vibe;
+          }
+        } else {
+          delete currentSlotSongs[slot];
+          delete el.dataset.vibe;
+        }
+      }
+
+      function applyVibeMap(vibes) {
+        vibesById = vibes || {};
+        Object.entries(currentSlotSongs).forEach(([slot, song]) => {
+          const el = ticketEls[slot];
+          const vibe = resolveVibe(song);
+          if (el && vibe) el.dataset.vibe = vibe;
+        });
+      }
+      // ---------------------------------------------------------------
+
       function initTickets() {
         ["power", "emotional", "evergreen"].forEach((slot) => {
           const el = document.getElementById("ticket-" + slot);
@@ -107,8 +201,10 @@
       }
 
       function hideAllTickets() {
-        Object.values(ticketEls).forEach((el) => {
-          el.classList.remove("visible", "locked");
+        Object.entries(ticketEls).forEach(([slot, el]) => {
+          stopVibeAnimation(slot);
+          setSlotSong(slot, null);
+          el.classList.remove("visible", "locked", "locked-pop");
           el.classList.add("hidden");
           const titleEl = el.querySelector(".ticket-title");
           const artistEl = el.querySelector(".ticket-artist");
@@ -125,14 +221,18 @@
           const el = ticketEls[slot];
           if (!el) return;
 
-          el.classList.remove("locked", "hidden");
+          el.classList.remove("locked", "locked-pop", "hidden");
           if (song) {
             const titleEl = el.querySelector(".ticket-title");
             const artistEl = el.querySelector(".ticket-artist");
             if (titleEl) titleEl.textContent = song.title || "";
             if (artistEl) artistEl.textContent = song.artist || "";
             el.classList.add("visible");
+            setSlotSong(slot, song);
+            scheduleVibeAnimation(slot, true);
           } else {
+            stopVibeAnimation(slot);
+            setSlotSong(slot, null);
             el.classList.remove("visible");
             el.classList.add("hidden");
           }
@@ -157,9 +257,20 @@
               const artistEl = el.querySelector(".ticket-artist");
               if (titleEl) titleEl.textContent = song.title || "";
               if (artistEl) artistEl.textContent = song.artist || "";
+              setSlotSong(key, song);
             }
+
+            // Celebration pop for the chosen card; its subtle vibe
+            // animations keep running while the audience watches.
+            el.classList.remove("locked-pop");
+            void el.offsetWidth; // restart the pop animation if re-locked
+            el.classList.add("locked-pop");
+            window.setTimeout(() => el.classList.remove("locked-pop"), 1000);
+            scheduleVibeAnimation(key, true);
           } else {
-            el.classList.remove("locked");
+            stopVibeAnimation(key);
+            setSlotSong(key, null);
+            el.classList.remove("locked", "locked-pop");
             el.classList.remove("visible");
             el.classList.add("hidden");
           }
@@ -173,8 +284,10 @@
         if (!youtubeId) return;
 
         // Hide tickets while song plays
-        Object.values(ticketEls).forEach((el) => {
-          el.classList.remove("visible", "locked");
+        Object.entries(ticketEls).forEach(([slot, el]) => {
+          stopVibeAnimation(slot);
+          setSlotSong(slot, null);
+          el.classList.remove("visible", "locked", "locked-pop");
           el.classList.add("hidden");
         });
 
@@ -203,6 +316,10 @@
             break;
           case "PLAY_SONG":
             playSong(payload);
+            break;
+          case "SET_VIBES":
+            // Silent update from the admin once AI classification finishes.
+            applyVibeMap(payload.vibes);
             break;
           default:
             break;

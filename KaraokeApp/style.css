@@ -75,6 +75,8 @@ button {
 
 /* Ticket styling (used in both projector and admin) */
 .ticket {
+  --glow-color: rgba(255, 255, 255, 0.2);
+  --glow-color-strong: rgba(255, 255, 255, 0.45);
   min-width: 220px;
   max-width: 320px;
   padding: 16px 20px;
@@ -151,18 +153,24 @@ button {
 }
 
 .ticket-power {
+  --glow-color: rgba(255, 0, 85, 0.4);
+  --glow-color-strong: rgba(255, 0, 85, 0.8);
   border-color: rgba(255, 0, 85, 0.7);
-  box-shadow: 0 0 18px rgba(255, 0, 85, 0.4);
+  box-shadow: 0 0 18px var(--glow-color);
 }
 
 .ticket-emotional {
+  --glow-color: rgba(0, 204, 255, 0.4);
+  --glow-color-strong: rgba(0, 204, 255, 0.8);
   border-color: rgba(0, 204, 255, 0.7);
-  box-shadow: 0 0 18px rgba(0, 204, 255, 0.4);
+  box-shadow: 0 0 18px var(--glow-color);
 }
 
 .ticket-evergreen {
+  --glow-color: rgba(0, 255, 102, 0.4);
+  --glow-color-strong: rgba(0, 255, 102, 0.8);
   border-color: rgba(0, 255, 102, 0.7);
-  box-shadow: 0 0 18px rgba(0, 255, 102, 0.4);
+  box-shadow: 0 0 18px var(--glow-color);
 }
 
 .ticket-power .ticket-label {
@@ -628,6 +636,273 @@ body.audience-showing-options .admin-status {
 
 .text-muted {
   color: var(--color-muted);
+}
+
+/* ------------------------------------------------------------------ */
+/* Vibe animations (projector cards)                                  */
+/*                                                                    */
+/* The projector adds .vibe-anim plus one .vibe-<name> class to a     */
+/* ticket for a single subtle play (~every 30s per card, randomized). */
+/* Movement runs on .ticket-inner so it never fights the ticket's own */
+/* enter/lock transforms; the glow flare runs on the ticket itself.   */
+/* ------------------------------------------------------------------ */
+
+.ticket.vibe-anim:not(.locked) {
+  animation: vibeGlow var(--vibe-duration, 3.5s) ease-in-out;
+}
+
+@keyframes vibeGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 18px var(--glow-color);
+  }
+  50% {
+    box-shadow: 0 0 32px var(--glow-color-strong);
+  }
+}
+
+.ticket.vibe-anim .ticket-inner {
+  animation-duration: var(--vibe-duration, 3.5s);
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+  will-change: transform;
+}
+
+.ticket.vibe-anim.vibe-anthem .ticket-inner {
+  animation-name: vibeAnthem;
+}
+
+.ticket.vibe-anim.vibe-fire .ticket-inner {
+  animation-name: vibeFire;
+}
+
+.ticket.vibe-anim.vibe-groove .ticket-inner {
+  animation-name: vibeGroove;
+}
+
+.ticket.vibe-anim.vibe-heartbeat .ticket-inner {
+  animation-name: vibeHeartbeat;
+}
+
+.ticket.vibe-anim.vibe-tearjerker .ticket-inner {
+  animation-name: vibeTearjerker;
+}
+
+.ticket.vibe-anim.vibe-soaring .ticket-inner {
+  animation-name: vibeSoaring;
+}
+
+.ticket.vibe-anim.vibe-dreamy .ticket-inner {
+  animation-name: vibeDreamy;
+}
+
+.ticket.vibe-anim.vibe-singalong .ticket-inner {
+  animation-name: vibeSingalong;
+}
+
+.ticket.vibe-anim.vibe-classic .ticket-inner {
+  animation-name: vibeClassic;
+}
+
+/* Triumphant double fist-pump */
+@keyframes vibeAnthem {
+  0%,
+  60%,
+  100% {
+    transform: none;
+  }
+  15% {
+    transform: translateY(-3px) scale(1.03);
+  }
+  30% {
+    transform: none;
+  }
+  45% {
+    transform: translateY(-3px) scale(1.03);
+  }
+}
+
+/* Hard-rock rattle with a brightness flicker */
+@keyframes vibeFire {
+  0%,
+  70%,
+  100% {
+    transform: none;
+    filter: none;
+  }
+  10% {
+    transform: translateX(-1.5px);
+    filter: brightness(1.12);
+  }
+  20% {
+    transform: translateX(1.5px);
+  }
+  30% {
+    transform: translateX(-1px);
+    filter: brightness(1.18);
+  }
+  40% {
+    transform: translateX(1px);
+  }
+  50% {
+    transform: none;
+    filter: brightness(1.08);
+  }
+}
+
+/* Hip-swinging side sway */
+@keyframes vibeGroove {
+  0%,
+  100% {
+    transform: none;
+  }
+  20% {
+    transform: translateX(3px) rotate(1deg);
+  }
+  50% {
+    transform: translateX(-3px) rotate(-1deg);
+  }
+  80% {
+    transform: translateX(2px) rotate(0.6deg);
+  }
+}
+
+/* Gentle double heartbeat thump */
+@keyframes vibeHeartbeat {
+  0%,
+  40%,
+  100% {
+    transform: none;
+  }
+  10% {
+    transform: scale(1.04);
+  }
+  20% {
+    transform: none;
+  }
+  30% {
+    transform: scale(1.03);
+  }
+}
+
+/* Slow, heavy sigh downwards */
+@keyframes vibeTearjerker {
+  0%,
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(3px);
+    opacity: 0.82;
+  }
+}
+
+/* Rise up and hold, like a ballad climax */
+@keyframes vibeSoaring {
+  0%,
+  100% {
+    transform: none;
+  }
+  40%,
+  60% {
+    transform: translateY(-5px) scale(1.02);
+  }
+}
+
+/* Weightless drifting */
+@keyframes vibeDreamy {
+  0%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: translateY(-3px) rotate(0.5deg);
+  }
+  50% {
+    transform: translateY(1px) rotate(-0.5deg);
+  }
+  75% {
+    transform: translateY(-2px) rotate(0.3deg);
+  }
+}
+
+/* Arms-around-shoulders pendulum sway */
+@keyframes vibeSingalong {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-1.4deg);
+  }
+  50% {
+    transform: rotate(1.4deg);
+  }
+  80% {
+    transform: rotate(-0.7deg);
+  }
+}
+
+/* Warm golden shimmer */
+@keyframes vibeClassic {
+  0%,
+  100% {
+    transform: none;
+    filter: none;
+  }
+  50% {
+    transform: scale(1.015);
+    filter: brightness(1.18) saturate(1.1);
+  }
+}
+
+/* Chosen card: celebratory pop on lock, then a continuous breathing glow
+   while the audience watches. Its periodic vibe animations keep running. */
+.ticket.locked {
+  animation: lockedBreathing 2.6s ease-in-out infinite;
+}
+
+@keyframes lockedBreathing {
+  0%,
+  100% {
+    box-shadow:
+      0 0 26px rgba(255, 255, 255, 0.3),
+      0 0 18px var(--glow-color);
+  }
+  50% {
+    box-shadow:
+      0 0 42px rgba(255, 255, 255, 0.5),
+      0 0 30px var(--glow-color-strong);
+  }
+}
+
+.ticket.locked-pop .ticket-inner {
+  animation: lockedPop 0.9s cubic-bezier(0.22, 1.6, 0.36, 1);
+}
+
+@keyframes lockedPop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.1);
+  }
+  60% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket.vibe-anim:not(.locked),
+  .ticket.vibe-anim .ticket-inner,
+  .ticket.locked,
+  .ticket.locked-pop .ticket-inner {
+    animation: none;
+  }
 }
 
 
