@@ -17,9 +17,19 @@
             window for the projector – or use the button.
           </div>
         </div>
-        <button id="btn-open-projector" class="btn btn-secondary">
-          Open projector window
-        </button>
+        <div class="admin-header-tools">
+          <button id="btn-open-projector" class="btn btn-secondary">
+            Open projector window
+          </button>
+          <button
+            id="btn-ai-vibes"
+            class="btn btn-secondary"
+            title="Classify song vibes with Claude for the card animations. Shift-click to change the API key."
+          >
+            ✨ AI Vibes
+          </button>
+          <div class="admin-vibes-status" id="vibes-status" role="status"></div>
+        </div>
         <div class="kbd-hint">
           <span class="kbd">1</span><span class="kbd">2</span
           ><span class="kbd">3</span> lock deck ·
@@ -254,6 +264,7 @@
     <script src="data.js"></script>
     <script src="core.js"></script>
     <script src="logic.js"></script>
+    <script src="vibes.js"></script>
     <script src="admin.js"></script>
   </body>
 </html>

@@ -514,6 +514,22 @@ button {
   margin-top: 2px;
 }
 
+.admin-header-tools {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-vibes-status {
+  width: 100%;
+  text-align: right;
+  font-size: 0.7rem;
+  color: var(--rb-muted);
+  min-height: 1em;
+}
+
 /* Deck columns */
 .admin-columns {
   display: flex;

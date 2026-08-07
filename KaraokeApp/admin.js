@@ -782,6 +782,99 @@
     renderEverything();
   }
 
+  // Song vibes (card animations on the projector)
+  //
+  // Hand-curated vibes in data.js are kept as-is; Claude classifies any
+  // songs without one whenever a song list is loaded (the list can be
+  // replaced dynamically, e.g. by a sheet loader), with results cached
+  // per song in localStorage. See vibes.js for the engine.
+
+  const btnAiVibes = document.getElementById("btn-ai-vibes");
+  const vibesStatusEl = document.getElementById("vibes-status");
+  let lastVibeSongsRef = null;
+  let vibeClassificationRunning = false;
+
+  function updateVibesStatus(text) {
+    if (vibesStatusEl) vibesStatusEl.textContent = text || "";
+  }
+
+  function broadcastVibes(songs) {
+    const vibes = {};
+    songs.forEach((song) => {
+      if (song.id != null && song.vibe) vibes[song.id] = song.vibe;
+    });
+    window.sendKaraokeMessage(ACTIONS.SET_VIBES, { vibes });
+  }
+
+  async function runVibeClassification(interactive) {
+    if (!window.KaraokeVibes) return;
+    const songs = Array.isArray(window.SONGS) ? window.SONGS : SONGS;
+    if (!songs.length) return;
+
+    // Instant baseline: curated vibes + cached AI results + heuristics.
+    window.KaraokeVibes.assignVibes(songs);
+    broadcastVibes(songs);
+
+    if (!window.KaraokeVibes.hasApiKey()) {
+      if (!interactive) {
+        updateVibesStatus("Built-in vibes active – ✨ AI Vibes adds Claude");
+        return;
+      }
+      const key = window.prompt(
+        "Anthropic API key for vibe classification\n(stored only in this browser's localStorage):"
+      );
+      if (!key || !key.trim()) return;
+      window.KaraokeVibes.setApiKey(key.trim());
+    }
+
+    if (vibeClassificationRunning) return;
+    vibeClassificationRunning = true;
+    updateVibesStatus("Classifying vibes with Claude…");
+    try {
+      const result = await window.KaraokeVibes.classifyWithAI(songs);
+      updateVibesStatus(
+        "Vibes ready (" +
+          result.fromAI +
+          " from Claude, " +
+          result.alreadyKnown +
+          " known)"
+      );
+      broadcastVibes(songs);
+    } catch (err) {
+      console.warn("[KARAOKE] AI vibe classification failed", err);
+      updateVibesStatus("AI vibes failed – using built-in vibes");
+    } finally {
+      vibeClassificationRunning = false;
+    }
+  }
+
+  function handleAiVibesClick(ev) {
+    // Shift-click lets the host replace or remove a stored API key.
+    if (ev.shiftKey && window.KaraokeVibes) {
+      const key = window.prompt(
+        "New Anthropic API key (empty to remove the stored key):"
+      );
+      if (key === null) return;
+      window.KaraokeVibes.setApiKey(key.trim() || null);
+    }
+    runVibeClassification(true);
+  }
+
+  // The song list is not static (a loader can replace window.SONGS at any
+  // time), so watch for the array reference changing and classify any
+  // songs that are not cached yet.
+  function watchSongsForVibes() {
+    const tick = () => {
+      const current = Array.isArray(window.SONGS) ? window.SONGS : SONGS;
+      if (current.length && current !== lastVibeSongsRef) {
+        lastVibeSongsRef = current;
+        runVibeClassification(false);
+      }
+    };
+    tick();
+    window.setInterval(tick, 1500);
+  }
+
   // Init
 
   function init() {
@@ -796,6 +889,9 @@
     }
     if (btnOpenProjector) {
       btnOpenProjector.addEventListener("click", openOrFocusProjector);
+    }
+    if (btnAiVibes) {
+      btnAiVibes.addEventListener("click", handleAiVibesClick);
     }
     if (btnPauseResume) {
       btnPauseResume.addEventListener("click", handlePauseResume);
@@ -852,6 +948,7 @@
 
     window.onKaraokeMessage(handleBroadcast);
     restoreAdminState();
+    watchSongsForVibes();
   }
 
   window.addEventListener("DOMContentLoaded", init);

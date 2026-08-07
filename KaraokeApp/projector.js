@@ -131,10 +131,29 @@
 
   const vibePulseTimers = {};
   const vibeCleanupTimers = {};
+  // Songs currently shown per slot, so a late SET_VIBES broadcast (AI
+  // classification finishing after the cards are already on screen) can
+  // silently retarget their vibes.
+  const slotSongs = {};
+  let vibesById = {};
 
   function songVibe(song, slot) {
+    // The admin broadcasts AI results after load; the map is fresher than
+    // whatever vibe the payload carried at the time it was sent.
+    const broadcast = song && song.id != null ? vibesById[song.id] : null;
+    if (VIBES.indexOf(broadcast) !== -1) return broadcast;
     const vibe = song && song.vibe;
     return VIBES.indexOf(vibe) !== -1 ? vibe : VIBE_FALLBACK[slot];
+  }
+
+  function applyVibeMap(vibes) {
+    vibesById = vibes || {};
+    Object.entries(slotSongs).forEach(([slot, song]) => {
+      const el = ticketEls[slot];
+      if (el && song && el.classList.contains("visible")) {
+        el.dataset.vibe = songVibe(song, slot);
+      }
+    });
   }
 
   function randomBetween(min, max) {
@@ -182,6 +201,7 @@
     optionsVisible = false;
     Object.entries(ticketEls).forEach(([slot, el]) => {
       stopVibePulses(slot);
+      delete slotSongs[slot];
       el.classList.remove("visible", "locked");
       el.classList.add("hidden");
       el.removeAttribute("data-vibe");
@@ -208,6 +228,7 @@
         const artistEl = el.querySelector(".ticket-artist");
         if (titleEl) titleEl.textContent = song.title || "";
         if (artistEl) artistEl.textContent = song.artist || "";
+        slotSongs[slot] = song;
         el.dataset.vibe = songVibe(song, slot);
         el.classList.add("visible");
         anyVisible = true;
@@ -216,6 +237,7 @@
           randomBetween(VIBE_FIRST_MIN_MS, VIBE_FIRST_MAX_MS)
         );
       } else {
+        delete slotSongs[slot];
         el.classList.remove("visible");
         el.classList.add("hidden");
         el.removeAttribute("data-vibe");
@@ -240,12 +262,14 @@
           const artistEl = el.querySelector(".ticket-artist");
           if (titleEl) titleEl.textContent = song.title || "";
           if (artistEl) artistEl.textContent = song.artist || "";
+          slotSongs[key] = song;
           el.dataset.vibe = songVibe(song, key);
         }
         // Celebrate the pick once the lock transition has settled, then keep
         // the chosen animation on the usual randomized cadence.
         scheduleVibePulses(key, 400);
       } else {
+        delete slotSongs[key];
         el.classList.remove("locked", "visible");
         el.classList.add("hidden");
         el.removeAttribute("data-vibe");
@@ -325,6 +349,9 @@
         break;
       case ACTIONS.PLAYER_CONTROL:
         handlePlayerControl(payload);
+        break;
+      case ACTIONS.SET_VIBES:
+        applyVibeMap(payload.vibes);
         break;
       default:
         break;
