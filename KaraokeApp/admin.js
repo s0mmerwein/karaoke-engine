@@ -6,10 +6,12 @@
 
   const {
     CATEGORIES,
+    GOLDEN_SLOT,
     buildSongIndex,
     pickSongForCategory,
     filterSongs,
     categoryCounts,
+    canGoldenHit,
     serializeAdminState,
     deserializeAdminState,
   } = window.KaraokeCore;
@@ -32,6 +34,11 @@
   let nextSlot = null;
   let hasStarted = false;
   let isAudienceShowingOptions = false;
+  // Golden buzzer: armed = the projector shows the glowing "press 4" invite;
+  // hit pending = someone pressed it and the DJ owes a pick or a dismissal.
+  // A hit is one-shot: it consumes the arm, re-arming is an explicit DJ act.
+  let goldenArmed = false;
+  let goldenHitPending = false;
   // Last state reported by the projector's player: "playing" | "paused" |
   // "ended" | "stopped" | "error" | null (unknown, e.g. after a reload).
   let playerState = null;
@@ -54,6 +61,14 @@
   const btnDismissError = document.getElementById("btn-dismiss-error");
   const historyList = document.getElementById("history-list");
   const historyEmpty = document.getElementById("history-empty");
+  const btnGoldenArm = document.getElementById("btn-golden-arm");
+  const btnGoldenDismiss = document.getElementById("btn-golden-dismiss");
+  const btnGoldenLock = document.getElementById("btn-golden-lock");
+  const goldenStateText = document.getElementById("golden-state-text");
+  const goldenRequestPanel = document.getElementById("golden-request");
+  const goldenSearchInput = document.getElementById("golden-search");
+  const goldenSongTableBody = document.getElementById("golden-song-tbody");
+  let goldenSelectedSongId = null;
 
   const slotEls = {};
   const countEls = {};
@@ -113,6 +128,8 @@
         nextSlot,
         started: hasStarted,
         isAudienceShowingOptions,
+        goldenArmed,
+        goldenHitPending,
       });
       window.localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(state));
     } catch (err) {
@@ -140,6 +157,8 @@
     nextSlot = null;
     hasStarted = false;
     playerState = null;
+    goldenArmed = false;
+    goldenHitPending = false;
     setAudienceShowingOptions(false);
     hideErrorBanner();
 
@@ -147,6 +166,7 @@
 
     // Ensure the projector does not keep showing stale options.
     window.sendKaraokeMessage(ACTIONS.HIDE_OPTIONS, {});
+    broadcastGoldenState();
   }
 
   // Projector window: a named target lets the browser focus/reuse the
@@ -305,13 +325,16 @@
         document.createTextNode(hasStarted ? "Started: " : "Next: ")
       );
       statusText.appendChild(span("admin-status-strong", nextSong.title));
-      statusText.appendChild(
-        document.createTextNode(
-          " – " +
-            nextSong.artist +
-            (category ? " (" + category.label + ")" : "")
-        )
-      );
+      statusText.appendChild(document.createTextNode(" – " + nextSong.artist));
+      if (nextSlot === GOLDEN_SLOT) {
+        statusText.appendChild(document.createTextNode(" ("));
+        statusText.appendChild(span("text-golden", "Golden Buzzer"));
+        statusText.appendChild(document.createTextNode(")"));
+      } else if (category) {
+        statusText.appendChild(
+          document.createTextNode(" (" + category.label + ")")
+        );
+      }
     }
 
     if (isAudienceShowingOptions) {
@@ -371,6 +394,8 @@
     renderCounts();
     renderHistory();
     renderManualSongOptions();
+    renderGoldenSongOptions();
+    renderGoldenPanel();
     updateControlButtons();
     updatePlaybackControls();
     updateStatus();
@@ -436,6 +461,8 @@
     renderCounts();
     updateControlButtons();
     updatePlaybackControls();
+    // A new round may have discarded a not-yet-started golden lock.
+    broadcastGoldenState();
     saveAdminState();
   }
 
@@ -480,11 +507,17 @@
   function handleClearSelection() {
     if (!nextSong || hasStarted) return;
 
+    const wasGoldenLock = nextSlot === GOLDEN_SLOT;
     nextSong = null;
     nextSlot = null;
+    // Clearing a golden mispick re-opens the request so the DJ can search
+    // again — the singer's wish is still owed.
+    if (wasGoldenLock) goldenHitPending = true;
     renderAllSlots();
+    renderGoldenPanel();
     updateControlButtons();
     updateStatus();
+    if (wasGoldenLock) broadcastGoldenState();
 
     // Do not change what the audience currently sees; clearing is an
     // admin-only action. Use "Show to Audience" to re-show options.
@@ -508,9 +541,12 @@
     renderCounts();
     renderHistory();
     renderManualSongOptions();
+    renderGoldenSongOptions();
     updateControlButtons();
     updatePlaybackControls();
     updateStatus();
+    // Starting a golden pick clears its locked ticket on the projector.
+    broadcastGoldenState();
     saveAdminState();
   }
 
@@ -635,6 +671,7 @@
     currentSuggestions[slot] = song;
 
     // Reset any previously locked choice since suggestions changed.
+    const hadGoldenLock = nextSlot === GOLDEN_SLOT && !!nextSong;
     nextSong = null;
     nextSlot = null;
     hasStarted = false;
@@ -643,6 +680,7 @@
     updateControlButtons();
     updatePlaybackControls();
     updateStatus();
+    if (hadGoldenLock) broadcastGoldenState();
 
     // If the audience view is currently showing options, update them.
     if (isAudienceShowingOptions) {
@@ -650,6 +688,174 @@
     }
 
     saveAdminState();
+  }
+
+  // Golden buzzer
+  //
+  // The admin owns the golden state; the projector renders idempotent
+  // GOLDEN_STATE snapshots. Broadcast one after every mutation of the
+  // golden flags or of the next-song selection they can affect.
+
+  function broadcastGoldenState() {
+    window.sendKaraokeMessage(ACTIONS.GOLDEN_STATE, {
+      armed: goldenArmed,
+      hit: goldenHitPending,
+      lockedSong:
+        nextSlot === GOLDEN_SLOT && nextSong && !hasStarted ? nextSong : null,
+    });
+  }
+
+  function handleGoldenArmToggle() {
+    // A pending hit already consumed the arm; resolve or dismiss it first.
+    if (goldenHitPending) return;
+    goldenArmed = !goldenArmed;
+    renderGoldenPanel();
+    broadcastGoldenState();
+    saveAdminState();
+  }
+
+  function handleGoldenHit() {
+    if (!canGoldenHit({ goldenArmed, goldenHitPending })) return;
+    // One-shot: the hit consumes the arm. It deliberately does not touch
+    // the shown options, a locked choice, or playback — the DJ resolves
+    // the wish via the request panel (or dismisses it).
+    goldenArmed = false;
+    goldenHitPending = true;
+    renderGoldenPanel();
+    broadcastGoldenState();
+    saveAdminState();
+  }
+
+  function handleGoldenDismiss() {
+    if (!goldenHitPending) return;
+    goldenHitPending = false;
+    renderGoldenPanel();
+    broadcastGoldenState();
+    saveAdminState();
+  }
+
+  function handleGoldenLock() {
+    if (!goldenHitPending) return;
+    const id = goldenSelectedSongId;
+    if (!id) return;
+    const song = songIndex.get(id);
+    if (!song) return;
+
+    if (playedSongIds.has(id)) {
+      const confirmed = window.confirm(
+        '"' +
+          song.title +
+          '" has already been played in this session. Lock it as the golden pick anyway?'
+      );
+      if (!confirmed) return;
+    }
+
+    nextSong = song;
+    nextSlot = GOLDEN_SLOT;
+    hasStarted = false;
+    goldenHitPending = false;
+    // A golden lock replaces whatever the audience was choosing between.
+    setAudienceShowingOptions(false);
+    window.sendKaraokeMessage(ACTIONS.HIDE_OPTIONS, {});
+    broadcastGoldenState();
+
+    renderAllSlots();
+    renderGoldenPanel();
+    updateControlButtons();
+    updateStatus();
+    saveAdminState();
+  }
+
+  function updateGoldenLockButton() {
+    if (btnGoldenLock) {
+      btnGoldenLock.disabled = !goldenHitPending || !goldenSelectedSongId;
+    }
+  }
+
+  function setGoldenSelectedRow(id) {
+    goldenSelectedSongId = id;
+    if (goldenSongTableBody) {
+      goldenSongTableBody.querySelectorAll("tr").forEach((row) => {
+        const isSelected = Number(row.dataset.songId) === id;
+        row.classList.toggle("selected", isSelected);
+        row.setAttribute("aria-selected", isSelected ? "true" : "false");
+      });
+    }
+    updateGoldenLockButton();
+  }
+
+  // Catalogue-wide variant of renderManualSongOptions: no category filter,
+  // plus a category column so the DJ can see what they are locking in.
+  function renderGoldenSongOptions() {
+    if (!goldenSongTableBody) return;
+
+    goldenSongTableBody.textContent = "";
+
+    const filtered = filterSongs(
+      SONGS,
+      null,
+      goldenSearchInput ? goldenSearchInput.value : ""
+    );
+    // Keep the current selection if its row is still visible.
+    const keepSelection = filtered.some(
+      (song) => song.id === goldenSelectedSongId
+    );
+    if (!keepSelection) goldenSelectedSongId = null;
+
+    filtered.forEach((song) => {
+      const row = document.createElement("tr");
+      row.dataset.songId = String(song.id);
+      row.tabIndex = 0;
+      const isSelected = song.id === goldenSelectedSongId;
+      row.setAttribute("aria-selected", isSelected ? "true" : "false");
+      if (isSelected) row.classList.add("selected");
+      if (playedSongIds.has(song.id)) {
+        row.classList.add("played");
+        row.title = "Already played in this session";
+      }
+
+      const titleCell = document.createElement("td");
+      titleCell.className = "col-title";
+      titleCell.textContent = song.title;
+
+      const artistCell = document.createElement("td");
+      artistCell.className = "col-artist";
+      artistCell.textContent = song.artist;
+
+      const catCell = document.createElement("td");
+      catCell.className = "col-cat text-" + song.category;
+      catCell.textContent = categoryBySlot[song.category]
+        ? categoryBySlot[song.category].label
+        : song.category;
+
+      row.appendChild(titleCell);
+      row.appendChild(artistCell);
+      row.appendChild(catCell);
+      goldenSongTableBody.appendChild(row);
+    });
+
+    updateGoldenLockButton();
+  }
+
+  function renderGoldenPanel() {
+    if (goldenStateText) {
+      goldenStateText.textContent = goldenHitPending
+        ? "HIT! Take the singer's wish and lock a song"
+        : goldenArmed
+        ? "ARMED — waiting for a brave soul"
+        : "Disarmed";
+    }
+    if (btnGoldenArm) {
+      btnGoldenArm.textContent = goldenArmed
+        ? "Disarm"
+        : "Arm Golden Buzzer";
+      btnGoldenArm.disabled = goldenHitPending;
+    }
+    if (btnGoldenDismiss) btnGoldenDismiss.disabled = !goldenHitPending;
+    if (goldenRequestPanel) goldenRequestPanel.hidden = !goldenHitPending;
+    updateGoldenLockButton();
+    document.body.classList.toggle("golden-armed", goldenArmed);
+    document.body.classList.toggle("golden-hit", goldenHitPending);
   }
 
   function handleUnmarkPlayed(id) {
@@ -678,6 +884,18 @@
 
     if (key === "1" || key === "2" || key === "3") {
       handleChoiceKey(key);
+      return;
+    }
+    if (key === "4") {
+      // DJ fallback when the projector keyboard is out of reach.
+      handleGoldenHit();
+      return;
+    }
+    if (key === "g") {
+      if (btnGoldenArm && !btnGoldenArm.disabled) {
+        ev.preventDefault();
+        handleGoldenArmToggle();
+      }
       return;
     }
     if (key === "Enter") {
@@ -717,7 +935,11 @@
 
     switch (msg.action) {
       case ACTIONS.AUDIENCE_KEY:
-        if (payload.key) handleChoiceKey(payload.key);
+        if (payload.key === "4") {
+          handleGoldenHit();
+        } else if (payload.key) {
+          handleChoiceKey(payload.key);
+        }
         break;
       case ACTIONS.PLAYER_STATE:
         playerState = payload.state || null;
@@ -755,6 +977,8 @@
       nextSong = songIndex.get(stored.nextSongId) || null;
       nextSlot = nextSong ? stored.nextSlot : null;
       hasStarted = stored.started && !!nextSong;
+      goldenArmed = stored.goldenArmed;
+      goldenHitPending = stored.goldenHitPending;
 
       const restoredIsAudienceShowing =
         stored.isAudienceShowingOptions && hasAnySuggestions();
@@ -762,10 +986,16 @@
 
       // Sync the projector with the restored state. A started selection is
       // deliberately NOT re-broadcast: the song may still be playing and a
-      // LOCK_CHOICE would draw the ticket overlay over the video.
+      // LOCK_CHOICE would draw the ticket overlay over the video. A golden
+      // lock rides in the GOLDEN_STATE snapshot below instead.
       if (restoredIsAudienceShowing) {
         window.sendKaraokeMessage(ACTIONS.SHOW_OPTIONS, optionsPayload());
-      } else if (nextSong && nextSlot && !hasStarted) {
+      } else if (
+        nextSong &&
+        nextSlot &&
+        nextSlot !== GOLDEN_SLOT &&
+        !hasStarted
+      ) {
         window.sendKaraokeMessage(ACTIONS.LOCK_CHOICE, {
           slot: nextSlot,
           song: nextSong,
@@ -779,6 +1009,9 @@
       setAudienceShowingOptions(false);
     }
 
+    // Always safe mid-playback: with hasStarted the snapshot carries no
+    // lockedSong, so at most the armed glow reappears — as it should.
+    broadcastGoldenState();
     renderEverything();
   }
 
@@ -943,6 +1176,42 @@
       historyList.addEventListener("click", (ev) => {
         const btn = ev.target.closest("button[data-unmark-id]");
         if (btn) handleUnmarkPlayed(Number(btn.dataset.unmarkId));
+      });
+    }
+
+    // Golden buzzer controls
+    if (btnGoldenArm) {
+      btnGoldenArm.addEventListener("click", handleGoldenArmToggle);
+    }
+    if (btnGoldenDismiss) {
+      btnGoldenDismiss.addEventListener("click", handleGoldenDismiss);
+    }
+    if (btnGoldenLock) {
+      btnGoldenLock.addEventListener("click", handleGoldenLock);
+    }
+    if (goldenSearchInput) {
+      goldenSearchInput.addEventListener(
+        "input",
+        debounce(() => renderGoldenSongOptions(), 150)
+      );
+    }
+    if (goldenSongTableBody) {
+      goldenSongTableBody.addEventListener("click", (ev) => {
+        const row = ev.target.closest("tr[data-song-id]");
+        if (row) setGoldenSelectedRow(Number(row.dataset.songId));
+      });
+      goldenSongTableBody.addEventListener("dblclick", (ev) => {
+        const row = ev.target.closest("tr[data-song-id]");
+        if (!row) return;
+        setGoldenSelectedRow(Number(row.dataset.songId));
+        handleGoldenLock();
+      });
+      goldenSongTableBody.addEventListener("keydown", (ev) => {
+        if (ev.key !== "Enter" && ev.key !== " ") return;
+        const row = ev.target.closest("tr[data-song-id]");
+        if (!row) return;
+        ev.preventDefault();
+        setGoldenSelectedRow(Number(row.dataset.songId));
       });
     }
 

@@ -20,6 +20,15 @@
   let nowPlaying = null;
   let nowPlayingText = null;
 
+  // Golden buzzer: rendered from GOLDEN_STATE snapshots only. The golden
+  // ticket is deliberately NOT in ticketEls so the option/lock lifecycle
+  // (showOptions, hideAllTickets, lockChoice) can never extinguish it.
+  let goldenEl = null;
+  let goldenCelebrationEl = null;
+  let goldenCelebrationTimer = null;
+  let golden = { armed: false, hit: false, lockedSong: null };
+  const GOLDEN_CELEBRATION_MS = 4500;
+
   // YouTube player
 
   function createPlayer() {
@@ -277,6 +286,56 @@
     });
   }
 
+  // Golden buzzer
+
+  function renderGoldenTicket() {
+    if (!goldenEl) return;
+    const titleEl = goldenEl.querySelector(".ticket-title");
+    const artistEl = goldenEl.querySelector(".ticket-artist");
+
+    goldenEl.classList.remove("visible", "locked", "golden-armed", "golden-hit", "hidden");
+
+    if (golden.lockedSong) {
+      goldenEl.classList.add("visible", "locked");
+      if (titleEl) titleEl.textContent = golden.lockedSong.title || "";
+      if (artistEl) artistEl.textContent = golden.lockedSong.artist || "";
+    } else if (golden.hit) {
+      goldenEl.classList.add("visible", "golden-hit");
+      if (titleEl) titleEl.textContent = "Make a wish…";
+      if (artistEl) artistEl.textContent = "Tell the DJ your song";
+    } else if (golden.armed) {
+      goldenEl.classList.add("visible", "golden-armed");
+      if (titleEl) titleEl.textContent = "Press 4";
+      if (artistEl) artistEl.textContent = "One free wish – any song!";
+    } else {
+      goldenEl.classList.add("hidden");
+      if (titleEl) titleEl.textContent = "–";
+      if (artistEl) artistEl.textContent = "–";
+    }
+  }
+
+  function playGoldenCelebration() {
+    if (!goldenCelebrationEl) return;
+    goldenCelebrationEl.classList.add("visible");
+    window.clearTimeout(goldenCelebrationTimer);
+    goldenCelebrationTimer = window.setTimeout(() => {
+      goldenCelebrationEl.classList.remove("visible");
+    }, GOLDEN_CELEBRATION_MS);
+  }
+
+  function handleGoldenState(payload) {
+    const next = {
+      armed: !!(payload && payload.armed),
+      hit: !!(payload && payload.hit),
+      lockedSong: (payload && payload.lockedSong) || null,
+    };
+    // Celebrate only on the rising edge, so a re-broadcast after an admin
+    // reload re-renders the pending ticket without replaying the burst.
+    if (next.hit && !golden.hit) playGoldenCelebration();
+    golden = next;
+    renderGoldenTicket();
+  }
+
   function playSong(payload) {
     const youtubeId = payload && payload.youtubeId;
     if (!youtubeId) return;
@@ -353,6 +412,9 @@
       case ACTIONS.SET_VIBES:
         applyVibeMap(payload.vibes);
         break;
+      case ACTIONS.GOLDEN_STATE:
+        handleGoldenState(payload);
+        break;
       default:
         break;
     }
@@ -364,6 +426,11 @@
       if ((key === "1" || key === "2" || key === "3") && optionsVisible) {
         window.sendKaraokeMessage(ACTIONS.AUDIENCE_KEY, { key });
       }
+      // The golden buzzer has its own gate, independent of the option
+      // tickets. The admin re-validates, so a stale gate can't force a hit.
+      if (key === "4" && golden.armed && !golden.hit) {
+        window.sendKaraokeMessage(ACTIONS.AUDIENCE_KEY, { key });
+      }
     });
   }
 
@@ -371,6 +438,8 @@
     idleScreen = document.getElementById("idle-screen");
     nowPlaying = document.getElementById("now-playing");
     nowPlayingText = document.getElementById("now-playing-text");
+    goldenEl = document.getElementById("ticket-golden");
+    goldenCelebrationEl = document.getElementById("golden-celebration");
     initTickets();
     setupKeyboard();
     showIdle();

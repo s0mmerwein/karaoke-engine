@@ -33,6 +33,8 @@
         <div class="kbd-hint">
           <span class="kbd">1</span><span class="kbd">2</span
           ><span class="kbd">3</span> lock deck ·
+          <span class="kbd">4</span> golden hit ·
+          <span class="kbd">g</span> arm golden ·
           <span class="kbd">,</span> generate ·
           <span class="kbd">+</span> show/hide ·
           <span class="kbd">Enter</span> start ·
@@ -113,6 +115,53 @@
           <div class="admin-status" id="status-text" role="status" aria-live="polite">
             No selection made yet.
           </div>
+        </div>
+      </section>
+
+      <section class="admin-golden" id="golden-panel">
+        <div class="admin-golden-header">
+          <span>Golden Buzzer</span>
+          <span
+            class="admin-golden-state"
+            id="golden-state-text"
+            role="status"
+            aria-live="polite"
+          >
+            Disarmed
+          </span>
+        </div>
+        <div class="admin-golden-controls">
+          <button id="btn-golden-arm" class="btn btn-golden">
+            Arm Golden Buzzer
+          </button>
+          <button id="btn-golden-dismiss" class="btn btn-ghost btn-small" disabled>
+            Dismiss request
+          </button>
+        </div>
+        <div class="admin-golden-request" id="golden-request" hidden>
+          <label class="admin-manual-field admin-manual-search">
+            Search entire catalogue
+            <input
+              type="text"
+              id="golden-search"
+              placeholder="Search by title or artist…"
+            />
+          </label>
+          <div class="admin-manual-table-wrapper">
+            <table class="admin-manual-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Artist</th>
+                  <th>Cat.</th>
+                </tr>
+              </thead>
+              <tbody id="golden-song-tbody"></tbody>
+            </table>
+          </div>
+          <button id="btn-golden-lock" class="btn btn-golden btn-small" disabled>
+            Lock golden pick
+          </button>
         </div>
       </section>
 

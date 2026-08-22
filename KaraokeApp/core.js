@@ -17,7 +17,11 @@
     { key: "hard", label: "Very Hard", hotkey: "3" },
   ];
   const CATEGORY_KEYS = CATEGORIES.map((c) => c.key);
-  const STATE_VERSION = 2;
+  // The golden buzzer is a slot (a valid nextSlot value) but not a category:
+  // it has no difficulty, no song pool, and no pre-generated suggestion.
+  const GOLDEN_SLOT = "golden";
+  const VALID_SLOTS = CATEGORY_KEYS.concat([GOLDEN_SLOT]);
+  const STATE_VERSION = 3;
 
   function buildSongIndex(songs) {
     const index = new Map();
@@ -44,10 +48,11 @@
     return unplayed[idx];
   }
 
+  // category null searches the whole catalogue (used by the golden buzzer).
   function filterSongs(songs, category, query) {
     const q = (query || "").trim().toLowerCase();
     return (Array.isArray(songs) ? songs : []).filter((song) => {
-      if (song.category !== category) return false;
+      if (category != null && song.category !== category) return false;
       if (!q) return true;
       return (song.title + " " + song.artist).toLowerCase().includes(q);
     });
@@ -64,6 +69,13 @@
     return { total, remaining };
   }
 
+  // A golden hit is only possible while armed and no hit is already waiting
+  // for the DJ to resolve it.
+  function canGoldenHit(state) {
+    if (!state || typeof state !== "object") return false;
+    return !!state.goldenArmed && !state.goldenHitPending;
+  }
+
   function serializeAdminState(state) {
     const suggestions = {};
     CATEGORY_KEYS.forEach((key) => {
@@ -78,6 +90,8 @@
       nextSlot: state.nextSlot || null,
       started: !!state.started,
       isAudienceShowingOptions: !!state.isAudienceShowingOptions,
+      goldenArmed: !!state.goldenArmed,
+      goldenHitPending: !!state.goldenHitPending,
     };
   }
 
@@ -115,7 +129,7 @@
     const nextSongId =
       typeof state.nextSongId === "number" ? state.nextSongId : null;
     const nextSlot =
-      nextSongId != null && CATEGORY_KEYS.includes(state.nextSlot)
+      nextSongId != null && VALID_SLOTS.includes(state.nextSlot)
         ? state.nextSlot
         : null;
 
@@ -131,17 +145,23 @@
       nextSlot,
       started,
       isAudienceShowingOptions: !!state.isAudienceShowingOptions,
+      // v1/v2 payloads have no golden fields; they default to false.
+      goldenArmed: state.goldenArmed === true,
+      goldenHitPending: state.goldenHitPending === true,
     };
   }
 
   return {
     CATEGORIES,
     CATEGORY_KEYS,
+    GOLDEN_SLOT,
+    VALID_SLOTS,
     STATE_VERSION,
     buildSongIndex,
     pickSongForCategory,
     filterSongs,
     categoryCounts,
+    canGoldenHit,
     serializeAdminState,
     deserializeAdminState,
   };

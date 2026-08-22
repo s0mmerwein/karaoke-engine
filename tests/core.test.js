@@ -3,10 +3,13 @@ const assert = require("node:assert/strict");
 
 const {
   CATEGORY_KEYS,
+  GOLDEN_SLOT,
+  VALID_SLOTS,
   buildSongIndex,
   pickSongForCategory,
   filterSongs,
   categoryCounts,
+  canGoldenHit,
   serializeAdminState,
   deserializeAdminState,
 } = require("../KaraokeApp/core.js");
@@ -53,6 +56,15 @@ test("filterSongs with empty query returns the whole category", () => {
   assert.equal(filterSongs(SONGS, "middle", "  ").length, 1);
 });
 
+test("filterSongs with null category searches the whole catalogue", () => {
+  assert.equal(filterSongs(SONGS, null, "").length, 4);
+  assert.deepEqual(
+    filterSongs(SONGS, null, "delta").map((s) => s.id),
+    [4]
+  );
+  assert.equal(filterSongs(SONGS, null, "ALPHA").length, 1);
+});
+
 test("categoryCounts reports total and remaining", () => {
   assert.deepEqual(categoryCounts(SONGS, "easy", new Set([1])), {
     total: 2,
@@ -80,6 +92,72 @@ test("serialize/deserialize round-trips state including the started flag", () =>
   assert.equal(restored.nextSlot, "easy");
   assert.equal(restored.started, true);
   assert.equal(restored.isAudienceShowingOptions, false);
+  // A state without golden fields serializes and restores them as false.
+  assert.equal(restored.goldenArmed, false);
+  assert.equal(restored.goldenHitPending, false);
+});
+
+test("serialize/deserialize round-trips golden buzzer state", () => {
+  const serialized = serializeAdminState({
+    playedSongIds: new Set(),
+    suggestions: { easy: null, middle: null, hard: null },
+    nextSong: null,
+    nextSlot: null,
+    started: false,
+    isAudienceShowingOptions: false,
+    goldenArmed: true,
+    goldenHitPending: true,
+  });
+  const restored = deserializeAdminState(JSON.stringify(serialized));
+  assert.equal(restored.goldenArmed, true);
+  assert.equal(restored.goldenHitPending, true);
+});
+
+test("v2 state without golden fields defaults them to false", () => {
+  const restored = deserializeAdminState(
+    JSON.stringify({
+      version: 2,
+      playedSongIds: [1],
+      suggestions: { easy: 2, middle: null, hard: null },
+      nextSongId: 2,
+      nextSlot: "easy",
+      started: false,
+      isAudienceShowingOptions: true,
+    })
+  );
+  assert.equal(restored.goldenArmed, false);
+  assert.equal(restored.goldenHitPending, false);
+  assert.equal(restored.nextSongId, 2);
+  assert.equal(restored.nextSlot, "easy");
+  assert.equal(restored.isAudienceShowingOptions, true);
+});
+
+test('nextSlot "golden" survives a round-trip', () => {
+  const serialized = serializeAdminState({
+    playedSongIds: new Set(),
+    suggestions: { easy: null, middle: null, hard: null },
+    nextSong: SONGS[1],
+    nextSlot: GOLDEN_SLOT,
+    started: false,
+    isAudienceShowingOptions: false,
+  });
+  const restored = deserializeAdminState(JSON.stringify(serialized));
+  assert.equal(restored.nextSongId, 2);
+  assert.equal(restored.nextSlot, "golden");
+
+  // nextSlot is meaningless without a valid nextSongId, golden included.
+  const orphan = deserializeAdminState(
+    JSON.stringify({ version: 3, nextSongId: null, nextSlot: "golden" })
+  );
+  assert.equal(orphan.nextSlot, null);
+});
+
+test("canGoldenHit only allows an armed buzzer without a pending hit", () => {
+  assert.equal(canGoldenHit({ goldenArmed: true, goldenHitPending: false }), true);
+  assert.equal(canGoldenHit({ goldenArmed: true, goldenHitPending: true }), false);
+  assert.equal(canGoldenHit({ goldenArmed: false, goldenHitPending: false }), false);
+  assert.equal(canGoldenHit({}), false);
+  assert.equal(canGoldenHit(null), false);
 });
 
 test("deserialize rejects garbage", () => {
@@ -148,4 +226,5 @@ test("started flag cannot be true without a nextSongId", () => {
 
 test("category keys stay in sync with slots", () => {
   assert.deepEqual(CATEGORY_KEYS, ["easy", "middle", "hard"]);
+  assert.deepEqual(VALID_SLOTS, ["easy", "middle", "hard", "golden"]);
 });
